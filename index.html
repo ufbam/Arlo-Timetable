@@ -26,14 +26,14 @@
       padding: 20px 20px 26px;
       box-sizing: border-box;
       border: 1px solid #1f2937;
-      overflow: hidden; /* keep table inside border */
+      overflow: hidden;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      margin-bottom: 14px;
+      margin-bottom: 8px;
       gap: 8px;
       flex-wrap: wrap;
     }
@@ -57,6 +57,34 @@
       color: #22c55e;
     }
 
+    .week-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .week-bar button {
+      border-radius: 999px;
+      border: 1px solid #374151;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 2px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .week-bar button:hover {
+      background: #1f2937;
+    }
+
+    #weekLabel {
+      font-weight: 500;
+    }
+
     table {
       width: 100%;
       max-width: 100%;
@@ -64,7 +92,7 @@
       border-radius: 12px;
       overflow: hidden;
       margin: 0;
-      table-layout: fixed; /* keeps columns behaving */
+      table-layout: fixed;
     }
 
     thead {
@@ -186,7 +214,7 @@
     }
 
     .fav-subject {
-      color: #22c55e; /* favourite = green subject name */
+      color: #22c55e;
     }
 
     .cell-flags {
@@ -459,6 +487,12 @@
     <span id="jsStatus">Connecting…</span>
   </header>
 
+  <div class="week-bar">
+    <button id="prevWeek">&larr;</button>
+    <span id="weekLabel">Week</span>
+    <button id="nextWeek">&rarr;</button>
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -509,7 +543,7 @@
   </table>
 
   <div class="footer-note">
-    Data is shared via Firebase. Everyone using this link sees the same notes.
+    Data is shared via Firebase. Each week is stored separately.
   </div>
 </div>
 
@@ -556,7 +590,7 @@
         <button type="button" id="catchupAddBtn">Add</button>
       </div>
       <div class="catchup-hint">
-        Choose when the catch-up will happen. You can use break, lunch or another lesson.
+        Choose when the catch-up will happen. You can use break, lunch, another lesson, or at home.
       </div>
     </div>
 
@@ -587,9 +621,9 @@
   measurementId: "G-TZGM9MP2QT"
 };
 
+
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const docRef = doc(db, "timetables", "arlo-main");
 
   const timetable = {
     periods: [
@@ -702,12 +736,23 @@
   const popupCancelBtn = document.getElementById("popupCancel");
   const popupCloseBtn = document.getElementById("popupClose");
 
+  const weekLabelEl = document.getElementById("weekLabel");
+  const prevWeekBtn = document.getElementById("prevWeek");
+  const nextWeekBtn = document.getElementById("nextWeek");
+
+  // populate catch-up selects once
   days.forEach(day => {
     const opt = document.createElement("option");
     opt.value = day;
     opt.textContent = day;
     catchupDaySelect.appendChild(opt);
   });
+  // extra option for at home
+  const homeOpt = document.createElement("option");
+  homeOpt.value = "__HOME__";
+  homeOpt.textContent = "At home";
+  catchupDaySelect.appendChild(homeOpt);
+
   timetable.periods.forEach(period => {
     const opt = document.createElement("option");
     opt.value = period.key;
@@ -715,8 +760,20 @@
     catchupPeriodSelect.appendChild(opt);
   });
 
+  catchupDaySelect.addEventListener("change", () => {
+    if (catchupDaySelect.value === "__HOME__") {
+      catchupPeriodSelect.disabled = true;
+    } else {
+      catchupPeriodSelect.disabled = false;
+    }
+  });
+
+  let currentDocRef = null;
+  let unsubscribe = null;
+
   function saveState() {
-    return setDoc(docRef, state);
+    if (!currentDocRef) return;
+    return setDoc(currentDocRef, state);
   }
 
   function buildCatchUpIndex() {
@@ -733,6 +790,9 @@
   }
 
   function describeSlotKey(slotKey) {
+    if (slotKey.startsWith("HOME_")) {
+      return "At home";
+    }
     const [dayName, periodKey] = slotKey.split("_");
     const period = timetable.periods.find(p => p.key === periodKey);
     const dayData = timetable.days[dayName];
@@ -786,8 +846,13 @@
   catchupAddBtn.addEventListener("click", () => {
     if (!currentIsLesson) return;
     const day = catchupDaySelect.value;
-    const periodKey = catchupPeriodSelect.value;
-    const key = slotKeyFor(day, periodKey);
+    let key;
+    if (day === "__HOME__") {
+      key = "HOME_" + currentSlotKey;
+    } else {
+      const periodKey = catchupPeriodSelect.value;
+      key = slotKeyFor(day, periodKey);
+    }
     if (!currentCatchUpSlots.includes(key)) {
       currentCatchUpSlots.push(key);
       renderCatchupList();
@@ -984,27 +1049,78 @@
     });
   }
 
-  renderGrid();
+  // ---- Week handling ----
+  function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 Sun, 1 Mon...
+    const diff = (day === 0 ? -6 : 1) - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
 
-  onSnapshot(
-    docRef,
-    docSnap => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        state.subjectMeta = data.subjectMeta || {};
-        state.slotState = data.slotState || {};
-      } else {
-        saveState();
+  function getWeekKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function formatWeekLabel(d) {
+    const opts = { day: "numeric", month: "short", year: "numeric" };
+    return "Week of " + d.toLocaleDateString(undefined, opts);
+  }
+
+  let currentWeekDate = getMonday(new Date());
+
+  function updateWeekLabel() {
+    weekLabelEl.textContent = formatWeekLabel(currentWeekDate);
+  }
+
+  function subscribeToCurrentWeek() {
+    if (unsubscribe) unsubscribe();
+    const key = getWeekKey(currentWeekDate);
+    currentDocRef = doc(db, "timetables", "arlo-" + key);
+
+    // clear state while loading this week
+    state = { subjectMeta: {}, slotState: {} };
+    renderGrid();
+
+    unsubscribe = onSnapshot(
+      currentDocRef,
+      docSnap => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          state.subjectMeta = data.subjectMeta || {};
+          state.slotState = data.slotState || {};
+        } else {
+          saveState();
+        }
+        renderGrid();
+        jsStatusEl.textContent = "Synced via Firebase";
+        jsStatusEl.classList.add("ready");
+      },
+      error => {
+        console.error("Firestore error:", error);
+        jsStatusEl.textContent = "Sync error";
       }
-      renderGrid();
-      jsStatusEl.textContent = "Synced via Firebase";
-      jsStatusEl.classList.add("ready");
-    },
-    error => {
-      console.error("Firestore error:", error);
-      jsStatusEl.textContent = "Sync error";
-    }
-  );
+    );
+  }
+
+  function changeWeek(offsetDays) {
+    const d = new Date(currentWeekDate);
+    d.setDate(d.getDate() + offsetDays);
+    currentWeekDate = getMonday(d);
+    updateWeekLabel();
+    subscribeToCurrentWeek();
+  }
+
+  prevWeekBtn.addEventListener("click", () => changeWeek(-7));
+  nextWeekBtn.addEventListener("click", () => changeWeek(7));
+
+  // initial
+  updateWeekLabel();
+  subscribeToCurrentWeek();
 </script>
 </body>
 </html>
