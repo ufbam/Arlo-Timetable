@@ -76,6 +76,12 @@
       vertical-align: top;
     }
 
+    /* vertical lines between days */
+    thead th:not(:first-child),
+    tbody td:not(.period-col) {
+      border-left: 1px solid #1f2937;
+    }
+
     th {
       font-weight: 600;
       color: #d1d5db;
@@ -443,7 +449,7 @@
       <h1>Arlo M · Year 8 Timetable</h1>
       <span>Click any slot to add notes, favourites and catch-up times.</span>
     </div>
-    <span id="jsStatus">JS loading…</span>
+    <span id="jsStatus">Connecting…</span>
   </header>
 
   <table>
@@ -461,8 +467,7 @@
   </table>
 
   <div class="footer-note">
-    All notes are stored in this browser using local storage.
-    Use the same device for everything to stick.
+    Data is shared via Firebase. Everyone using this link sees the same notes.
   </div>
 </div>
 
@@ -525,8 +530,28 @@
   </div>
 </div>
 
-<script>
-  // ---------- Data ---------------------------------------------------------
+<script type="module">
+  /* ---------- Firebase setup ---------- */
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // TODO: paste your real config here from the Firebase console
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const docRef = doc(db, "timetables", "arlo-main");
+
+  /* ---------- Timetable data ---------- */
+
   const timetable = {
     periods: [
       { key: "reg",   name: "Registration", start: "08:45", end: "09:05" },
@@ -604,61 +629,21 @@
     }
   };
 
-  const STORAGE_KEY = "arlo_timetable_state_v3";
   const days = Object.keys(timetable.days);
+
+  /* ---------- Shared state (synced via Firestore) ---------- */
+
+  let state = {
+    subjectMeta: {},   // e.g. { "Maths": { favourite: true } }
+    slotState: {}      // e.g. { "Monday_l1": { notes, needsCatchUp, catchUpSlots: [] } }
+  };
 
   function slotKeyFor(dayName, periodKey) {
     return dayName + "_" + periodKey;
   }
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { subjectMeta: {}, slotState: {} };
-      const parsed = JSON.parse(raw);
-      return {
-        subjectMeta: parsed.subjectMeta || {},
-        slotState: parsed.slotState || {}
-      };
-    } catch (e) {
-      return { subjectMeta: {}, slotState: {} };
-    }
-  }
+  /* ---------- DOM references ---------- */
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
-  let state = loadState();
-
-  function buildCatchUpIndex() {
-    const index = {};
-    for (const originKey in state.slotState) {
-      const entry = state.slotState[originKey];
-      if (!entry || !Array.isArray(entry.catchUpSlots)) continue;
-      entry.catchUpSlots.forEach(slotKey => {
-        if (!index[slotKey]) index[slotKey] = [];
-        index[slotKey].push(originKey);
-      });
-    }
-    return index;
-  }
-
-  function describeSlotKey(slotKey) {
-    const parts = slotKey.split("_");
-    const dayName = parts[0];
-    const periodKey = parts[1];
-    const period = timetable.periods.find(p => p.key === periodKey);
-    const dayData = timetable.days[dayName];
-    const slot = dayData ? dayData[periodKey] : null;
-    const base = dayName + " · " + (period ? period.name : periodKey);
-    if (slot && slot.subject) {
-      return slot.subject + " (" + base + ")";
-    }
-    return base;
-  }
-
-  // DOM refs (these EXIST in the markup above)
   const jsStatusEl = document.getElementById("jsStatus");
   const gridBody = document.getElementById("gridBody");
   const overlayEl = document.getElementById("lessonOverlay");
@@ -682,10 +667,7 @@
   const popupCancelBtn = document.getElementById("popupCancel");
   const popupCloseBtn = document.getElementById("popupClose");
 
-  jsStatusEl.textContent = "JS ready";
-  jsStatusEl.classList.add("ready");
-
-  // populate selects once
+  // populate catch-up selects once
   days.forEach(day => {
     const opt = document.createElement("option");
     opt.value = day;
@@ -695,9 +677,43 @@
   timetable.periods.forEach(period => {
     const opt = document.createElement("option");
     opt.value = period.key;
-    opt.textContent = period.name + " (" + period.start + "–" + period.end + ")";
+    opt.textContent = `${period.name} (${period.start}–${period.end})`;
     catchupPeriodSelect.appendChild(opt);
   });
+
+  /* ---------- Helpers ---------- */
+
+  function saveState() {
+    // last-write-wins is fine for this use case
+    return setDoc(docRef, state);
+  }
+
+  function buildCatchUpIndex() {
+    const index = {};
+    for (const originKey in state.slotState) {
+      const entry = state.slotState[originKey];
+      if (!entry || !Array.isArray(entry.catchUpSlots)) continue;
+      entry.catchUpSlots.forEach(slotKey => {
+        if (!index[slotKey]) index[slotKey] = [];
+        index[slotKey].push(originKey);
+      });
+    }
+    return index;
+  }
+
+  function describeSlotKey(slotKey) {
+    const [dayName, periodKey] = slotKey.split("_");
+    const period = timetable.periods.find(p => p.key === periodKey);
+    const dayData = timetable.days[dayName];
+    const slot = dayData ? dayData[periodKey] : null;
+    const base = `${dayName} · ${period ? period.name : periodKey}`;
+    if (slot && slot.subject) {
+      return `${slot.subject} (${base})`;
+    }
+    return base;
+  }
+
+  /* ---------- Popup state ---------- */
 
   let currentSlotKey = null;
   let currentIsLesson = false;
@@ -716,7 +732,7 @@
       return;
     }
 
-    currentCatchUpSlots.forEach(function (slotKey) {
+    currentCatchUpSlots.forEach(slotKey => {
       const item = document.createElement("div");
       item.className = "catchup-item";
 
@@ -727,7 +743,7 @@
       btn.type = "button";
       btn.className = "catchup-remove-btn";
       btn.textContent = "Remove";
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", () => {
         currentCatchUpSlots = currentCatchUpSlots.filter(k => k !== slotKey);
         renderCatchupList();
       });
@@ -738,7 +754,7 @@
     });
   }
 
-  catchupAddBtn.addEventListener("click", function () {
+  catchupAddBtn.addEventListener("click", () => {
     if (!currentIsLesson) return;
     const day = catchupDaySelect.value;
     const periodKey = catchupPeriodSelect.value;
@@ -756,7 +772,7 @@
       return;
     }
     scheduledForSection.style.display = "block";
-    originKeys.forEach(function (originKey) {
+    originKeys.forEach(originKey => {
       const item = document.createElement("div");
       item.className = "catchup-item";
       const label = document.createElement("span");
@@ -779,19 +795,19 @@
     currentSubject = slot && slot.subject ? slot.subject : null;
     currentIsLesson = !!slot && !period.special && !!slot.subject;
 
-    const whenText = day + " · " + period.name + " · " + period.start + " – " + period.end;
+    const whenText = `${day} · ${period.name} · ${period.start} – ${period.end}`;
 
     if (currentIsLesson) {
       popupTitleEl.textContent = slot.subject;
-      popupSubjectEl.textContent = "Subject: " + slot.subject;
-      popupRoomEl.textContent = slot.room ? ("Room: " + slot.room) : "Room: (not specified)";
+      popupSubjectEl.textContent = `Subject: ${slot.subject}`;
+      popupRoomEl.textContent = slot.room ? `Room: ${slot.room}` : "Room: (not specified)";
     } else if (slot && slot.subject) {
       popupTitleEl.textContent = slot.subject;
-      popupSubjectEl.textContent = "Time slot: " + slot.subject;
+      popupSubjectEl.textContent = `Time slot: ${slot.subject}`;
       popupRoomEl.textContent = "Room: (not applicable)";
     } else if (period.special) {
       popupTitleEl.textContent = period.name;
-      popupSubjectEl.textContent = "Time slot: " + period.name;
+      popupSubjectEl.textContent = `Time slot: ${period.name}`;
       popupRoomEl.textContent = "Room: (not applicable)";
     } else {
       popupTitleEl.textContent = "Free / other time";
@@ -834,7 +850,7 @@
     currentCatchUpSlots = [];
   }
 
-  popupSaveBtn.addEventListener("click", function () {
+  popupSaveBtn.addEventListener("click", () => {
     if (!currentSlotKey) return;
 
     if (!state.slotState[currentSlotKey]) state.slotState[currentSlotKey] = {};
@@ -849,34 +865,35 @@
     }
 
     saveState();
-    renderGrid();
     closeLessonPopup();
   });
 
   popupCancelBtn.addEventListener("click", closeLessonPopup);
   popupCloseBtn.addEventListener("click", closeLessonPopup);
-  overlayEl.addEventListener("click", function (e) {
+  overlayEl.addEventListener("click", e => {
     if (e.target === overlayEl || e.target.classList.contains("overlay-backdrop")) {
       closeLessonPopup();
     }
   });
 
-  function renderGrid() {
-    gridBody.innerHTML = "";
-    const catchUpIndex = buildCatchUpIndex();
+  /* ---------- Grid render ---------- */
 
-    timetable.periods.forEach(function (period) {
+  function renderGrid() {
+    const catchUpIndex = buildCatchUpIndex();
+    gridBody.innerHTML = "";
+
+    timetable.periods.forEach(period => {
       const tr = document.createElement("tr");
       if (period.special) tr.classList.add("special-row");
 
       const periodCell = document.createElement("td");
       periodCell.className = "period-col";
       periodCell.innerHTML =
-        '<div class="period-name">' + period.name + '</div>' +
-        '<div class="period-time">' + period.start + ' – ' + period.end + '</div>';
+        `<div class="period-name">${period.name}</div>` +
+        `<div class="period-time">${period.start} – ${period.end}</div>`;
       tr.appendChild(periodCell);
 
-      days.forEach(function (dayName) {
+      days.forEach(dayName => {
         const dayData = timetable.days[dayName];
         const slot = dayData[period.key];
         const key = slotKeyFor(dayName, period.key);
@@ -887,9 +904,7 @@
         const td = document.createElement("td");
         td.dataset.day = dayName;
         td.dataset.period = period.key;
-        td.addEventListener("click", function () {
-          openSlotPopup(dayName, period.key);
-        });
+        td.addEventListener("click", () => openSlotPopup(dayName, period.key));
 
         if (!slot && !period.special) {
           td.className = "cell-empty";
@@ -906,14 +921,14 @@
           const needsCatchUp = !!slotState.needsCatchUp;
 
           td.innerHTML =
-            '<div class="subject-row">' +
-              '<span class="subject-name">' + subject + '</span>' +
-              (room ? '<span class="room-tag">' + room + '</span>' : '') +
-            '</div>' +
-            '<div class="cell-flags">' +
-              (isFavSubject ? '<span class="flag fav-flag">★ Favourite</span>' : '') +
-              (needsCatchUp ? '<span class="flag catchup-flag">Catch up</span>' : '') +
-            '</div>';
+            `<div class="subject-row">
+              <span class="subject-name">${subject}</span>
+              ${room ? `<span class="room-tag">${room}</span>` : ""}
+            </div>
+            <div class="cell-flags">
+              ${isFavSubject ? `<span class="flag fav-flag">👍 Favourite</span>` : ""}
+              ${needsCatchUp ? `<span class="flag catchup-flag">Catch up</span>` : ""}
+            </div>`;
         }
 
         if (hasNotes) {
@@ -928,7 +943,7 @@
           hint.className = "catchup-target-hint";
           hint.textContent = scheduledFor.length === 1
             ? "Catch-up scheduled here"
-            : scheduledFor.length + " catch-ups scheduled here";
+            : `${scheduledFor.length} catch-ups scheduled here`;
           td.appendChild(hint);
         }
 
@@ -939,8 +954,27 @@
     });
   }
 
-  // initial render
+  /* ---------- Firestore live sync ---------- */
+
+  // Initial optimistic render with empty state
   renderGrid();
+
+  onSnapshot(docRef, docSnap => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      state.subjectMeta = data.subjectMeta || {};
+      state.slotState = data.slotState || {};
+    } else {
+      // first ever run: push empty state
+      saveState();
+    }
+    renderGrid();
+    jsStatusEl.textContent = "Synced via Firebase";
+    jsStatusEl.classList.add("ready");
+  }, error => {
+    console.error("Firestore error:", error);
+    jsStatusEl.textContent = "Sync error";
+  });
 </script>
 </body>
 </html>
