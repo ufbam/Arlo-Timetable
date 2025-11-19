@@ -76,9 +76,9 @@
       vertical-align: top;
     }
 
-    /* vertical lines between days */
+    /* vertical lines between periods */
     thead th:not(:first-child),
-    tbody td:not(.period-col) {
+    tbody td:not(.day-col) {
       border-left: 1px solid #1f2937;
     }
 
@@ -90,7 +90,7 @@
 
     th:first-child {
       text-align: left;
-      width: 170px;
+      width: 130px;
     }
 
     tbody tr:nth-child(odd) {
@@ -101,15 +101,12 @@
       background: #020617;
     }
 
-    tr.special-row {
-      background: #020617;
-    }
-
-    td.period-col {
+    .day-col {
       background: #020617;
       position: sticky;
       left: 0;
       z-index: 1;
+      font-weight: 600;
     }
 
     .period-name {
@@ -455,12 +452,47 @@
   <table>
     <thead>
       <tr>
-        <th>Period / Time</th>
-        <th>Monday</th>
-        <th>Tuesday</th>
-        <th>Wednesday</th>
-        <th>Thursday</th>
-        <th>Friday</th>
+        <th>Day</th>
+        <th>
+          <div class="period-name">Registration</div>
+          <div class="period-time">08:45 – 09:05</div>
+        </th>
+        <th>
+          <div class="period-name">Lesson 1</div>
+          <div class="period-time">09:05 – 09:55</div>
+        </th>
+        <th>
+          <div class="period-name">Lesson 2</div>
+          <div class="period-time">09:55 – 10:45</div>
+        </th>
+        <th>
+          <div class="period-name">Break</div>
+          <div class="period-time">10:45 – 11:05</div>
+        </th>
+        <th>
+          <div class="period-name">Lesson 3</div>
+          <div class="period-time">11:05 – 11:55</div>
+        </th>
+        <th>
+          <div class="period-name">Lesson 4</div>
+          <div class="period-time">11:55 – 12:45</div>
+        </th>
+        <th>
+          <div class="period-name">Lunch</div>
+          <div class="period-time">12:45 – 13:35</div>
+        </th>
+        <th>
+          <div class="period-name">Lesson 5</div>
+          <div class="period-time">13:35 – 14:25</div>
+        </th>
+        <th>
+          <div class="period-name">Lesson 6</div>
+          <div class="period-time">14:25 – 15:15</div>
+        </th>
+        <th>
+          <div class="period-name">Tutor Time</div>
+          <div class="period-time">15:15 – 15:20</div>
+        </th>
       </tr>
     </thead>
     <tbody id="gridBody"></tbody>
@@ -547,9 +579,8 @@
   measurementId: "G-TZGM9MP2QT"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 
+  const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const docRef = doc(db, "timetables", "arlo-main");
 
@@ -557,15 +588,15 @@ const app = initializeApp(firebaseConfig);
 
   const timetable = {
     periods: [
-      { key: "reg",   name: "Registration", start: "08:45", end: "09:05" },
-      { key: "l1",    name: "Lesson 1",     start: "09:05", end: "09:55" },
-      { key: "l2",    name: "Lesson 2",     start: "09:55", end: "10:45" },
+      { key: "reg",   name: "Registration", start: "08:45", end: "09:05", special: false },
+      { key: "l1",    name: "Lesson 1",     start: "09:05", end: "09:55", special: false },
+      { key: "l2",    name: "Lesson 2",     start: "09:55", end: "10:45", special: false },
       { key: "break", name: "Break",        start: "10:45", end: "11:05", special: true },
-      { key: "l3",    name: "Lesson 3",     start: "11:05", end: "11:55" },
-      { key: "l4",    name: "Lesson 4",     start: "11:55", end: "12:45" },
+      { key: "l3",    name: "Lesson 3",     start: "11:05", end: "11:55", special: false },
+      { key: "l4",    name: "Lesson 4",     start: "11:55", end: "12:45", special: false },
       { key: "lunch", name: "Lunch",        start: "12:45", end: "13:35", special: true },
-      { key: "l5",    name: "Lesson 5",     start: "13:35", end: "14:25" },
-      { key: "l6",    name: "Lesson 6",     start: "14:25", end: "15:15" },
+      { key: "l5",    name: "Lesson 5",     start: "13:35", end: "14:25", special: false },
+      { key: "l6",    name: "Lesson 6",     start: "14:25", end: "15:15", special: false },
       { key: "tutor", name: "Tutor Time",   start: "15:15", end: "15:20", special: true }
     ],
     days: {
@@ -637,8 +668,8 @@ const app = initializeApp(firebaseConfig);
   /* ---------- Shared state (synced via Firestore) ---------- */
 
   let state = {
-    subjectMeta: {},   // e.g. { "Maths": { favourite: true } }
-    slotState: {}      // e.g. { "Monday_l1": { notes, needsCatchUp, catchUpSlots: [] } }
+    subjectMeta: {},
+    slotState: {}
   };
 
   function slotKeyFor(dayName, periodKey) {
@@ -687,7 +718,6 @@ const app = initializeApp(firebaseConfig);
   /* ---------- Helpers ---------- */
 
   function saveState() {
-    // last-write-wins is fine for this use case
     return setDoc(docRef, state);
   }
 
@@ -879,24 +909,21 @@ const app = initializeApp(firebaseConfig);
     }
   });
 
-  /* ---------- Grid render ---------- */
+  /* ---------- Grid render (days down, periods across) ---------- */
 
   function renderGrid() {
     const catchUpIndex = buildCatchUpIndex();
     gridBody.innerHTML = "";
 
-    timetable.periods.forEach(period => {
+    days.forEach(dayName => {
       const tr = document.createElement("tr");
-      if (period.special) tr.classList.add("special-row");
 
-      const periodCell = document.createElement("td");
-      periodCell.className = "period-col";
-      periodCell.innerHTML =
-        `<div class="period-name">${period.name}</div>` +
-        `<div class="period-time">${period.start} – ${period.end}</div>`;
-      tr.appendChild(periodCell);
+      const dayCell = document.createElement("td");
+      dayCell.className = "day-col";
+      dayCell.textContent = dayName;
+      tr.appendChild(dayCell);
 
-      days.forEach(dayName => {
+      timetable.periods.forEach(period => {
         const dayData = timetable.days[dayName];
         const slot = dayData[period.key];
         const key = slotKeyFor(dayName, period.key);
@@ -959,25 +986,27 @@ const app = initializeApp(firebaseConfig);
 
   /* ---------- Firestore live sync ---------- */
 
-  // Initial optimistic render with empty state
   renderGrid();
 
-  onSnapshot(docRef, docSnap => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      state.subjectMeta = data.subjectMeta || {};
-      state.slotState = data.slotState || {};
-    } else {
-      // first ever run: push empty state
-      saveState();
+  onSnapshot(
+    docRef,
+    docSnap => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        state.subjectMeta = data.subjectMeta || {};
+        state.slotState = data.slotState || {};
+      } else {
+        saveState();
+      }
+      renderGrid();
+      jsStatusEl.textContent = "Synced via Firebase";
+      jsStatusEl.classList.add("ready");
+    },
+    error => {
+      console.error("Firestore error:", error);
+      jsStatusEl.textContent = "Sync error";
     }
-    renderGrid();
-    jsStatusEl.textContent = "Synced via Firebase";
-    jsStatusEl.classList.add("ready");
-  }, error => {
-    console.error("Firestore error:", error);
-    jsStatusEl.textContent = "Sync error";
-  });
+  );
 </script>
 </body>
 </html>
