@@ -52,7 +52,7 @@
       border-collapse: collapse;
       border-radius: 12px;
       overflow: hidden;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     thead {
@@ -112,28 +112,26 @@
       text-align: center;
       color: #4b5563;
       font-style: italic;
+      cursor: pointer;
     }
 
     td.cell-special {
       text-align: center;
       color: #9ca3af;
       font-style: italic;
-      background: #020617;
+      cursor: pointer;
     }
 
     td.cell-lesson {
       cursor: pointer;
       position: relative;
       padding: 7px 8px;
-      border-left: 3px solid transparent;
-      transition: background 0.08s, transform 0.05s, box-shadow 0.08s, border-color 0.08s;
+      transition: background 0.08s, transform 0.05s, box-shadow 0.08s;
     }
 
-    td.cell-lesson.has-color {
-      border-left-color: var(--subject-color);
-    }
-
-    td.cell-lesson:hover {
+    td.cell-lesson:hover,
+    td.cell-empty:hover,
+    td.cell-special:hover {
       background: #111827;
       transform: translateY(-1px);
       box-shadow: 0 8px 18px rgba(0,0,0,0.45);
@@ -194,81 +192,14 @@
       color: #22c55e;
     }
 
-    /* Subject configuration panel */
-    .subject-panel {
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px dashed #374151;
-    }
-
-    .subject-panel h2 {
-      font-size: 0.95rem;
-      margin: 0 0 8px;
-      color: #9ca3af;
-    }
-
-    .subject-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .subject-config {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #020617;
-      border: 1px solid #111827;
-      font-size: 0.8rem;
-    }
-
-    .subject-config span.label {
-      white-space: nowrap;
-    }
-
-    .subject-config input[type="color"] {
-      width: 26px;
-      height: 20px;
-      border-radius: 999px;
-      border: none;
-      padding: 0;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    .fav-toggle {
-      border-radius: 999px;
-      border: 1px solid #4b5563;
-      background: #020617;
-      color: #e5e7eb;
-      width: 24px;
-      height: 24px;
-      padding: 0;
-      cursor: pointer;
-      font-size: 0.9rem;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.08s, border-color 0.08s;
-    }
-
-    .fav-toggle.is-fav {
-      border-color: #facc15;
-      background: #facc15;
-      color: #111827;
-    }
-
-    .subject-panel-note {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: #6b7280;
+    .catchup-target-hint {
+      margin-top: 3px;
+      font-size: 0.72rem;
+      color: #38bdf8;
     }
 
     .footer-note {
-      margin-top: 8px;
+      margin-top: 4px;
       font-size: 0.8rem;
       color: #6b7280;
     }
@@ -299,7 +230,7 @@
       border-radius: 16px;
       padding: 16px 18px 14px;
       width: 100%;
-      max-width: 420px;
+      max-width: 430px;
       box-shadow: 0 24px 80px rgba(0,0,0,0.8);
       border: 1px solid #1f2937;
       z-index: 1;
@@ -308,6 +239,12 @@
     .lesson-popup h2 {
       margin: 0 0 6px;
       font-size: 1rem;
+    }
+
+    .lesson-popup h3 {
+      margin: 10px 0 4px;
+      font-size: 0.9rem;
+      color: #e5e7eb;
     }
 
     .popup-meta {
@@ -399,6 +336,77 @@
       color: #e5e7eb;
     }
 
+    .catchup-list {
+      margin: 4px 0 6px;
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .catchup-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .catchup-remove-btn {
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+
+    .catchup-add-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-top: 4px;
+      font-size: 0.8rem;
+    }
+
+    .catchup-add-row label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .catchup-add-row select {
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+    }
+
+    .catchup-add-row button {
+      border-radius: 999px;
+      border: 1px solid #374151;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .catchup-hint {
+      margin-top: 3px;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .catchup-empty {
+      font-size: 0.8rem;
+      color: #6b7280;
+      font-style: italic;
+    }
+
     @media (max-width: 768px) {
       body {
         padding: 10px;
@@ -419,8 +427,8 @@
 <body>
 <div class="app">
   <header>
-    <h1>Arlo M &middot; Year 8 Timetable</h1>
-    <span>Click a lesson to add notes, favourites and catch-up flags.</span>
+    <h1>Arlo M · Year 8 Timetable</h1>
+    <span>Click any slot to add notes, favourites and catch-up times.</span>
   </header>
 
   <table>
@@ -437,18 +445,9 @@
     <tbody id="gridBody"></tbody>
   </table>
 
-  <div class="subject-panel">
-    <h2>Subject colours & favourites</h2>
-    <div id="subjectPanel" class="subject-list"></div>
-    <div class="subject-panel-note">
-      Pick a colour for each subject and toggle the star to mark favourites.
-      Notes and catch-up flags are stored per lesson.
-    </div>
-  </div>
-
   <div class="footer-note">
-    All settings are saved in this browser using local storage.  
-    Use on the same device for everything to stick.
+    All notes are stored in this browser using local storage.
+    Use the same device for everything to stick.
   </div>
 </div>
 
@@ -457,28 +456,52 @@
   <div class="overlay-backdrop"></div>
   <div class="lesson-popup">
     <button class="close-btn" id="popupClose" aria-label="Close">&times;</button>
-    <h2 id="popupTitle">Lesson details</h2>
+    <h2 id="popupTitle">Details</h2>
     <div class="popup-meta">
       <div id="popupSubject"></div>
       <div id="popupWhen"></div>
       <div id="popupRoom"></div>
     </div>
 
-    <label class="checkbox-row">
+    <div id="popupFavRow" class="checkbox-row">
       <input type="checkbox" id="popupFavouriteSubject">
       <span>Mark this subject as a favourite</span>
-    </label>
+    </div>
 
-    <label class="checkbox-row">
+    <div id="popupNeedsRow" class="checkbox-row">
       <input type="checkbox" id="popupNeedsCatchup">
       <span>This lesson needs catching up</span>
-    </label>
+    </div>
 
     <label class="notes-label">
-      <span>Notes about this lesson</span>
+      <span>Notes for this time</span>
       <textarea id="popupNotes"
-                placeholder="What was this lesson about? Homework, tests, anything that needs catching up..."></textarea>
+        placeholder="What was this lesson or catch-up about? Homework, tests, anything to remember..."></textarea>
     </label>
+
+    <div id="popupCatchupSection">
+      <h3>Catch-up times for this lesson</h3>
+      <div id="catchupList" class="catchup-list"></div>
+      <div class="catchup-add-row">
+        <label>
+          Day
+          <select id="catchupDaySelect"></select>
+        </label>
+        <label>
+          Time
+          <select id="catchupPeriodSelect"></select>
+        </label>
+        <button type="button" id="catchupAddBtn">Add</button>
+      </div>
+      <div class="catchup-hint">
+        Choose when the catch-up will happen. You can use break, lunch or another lesson.
+      </div>
+    </div>
+
+    <div id="popupScheduledForSection">
+      <h3>Catch-ups scheduled in this time</h3>
+      <div id="scheduledForList" class="catchup-list"></div>
+    </div>
 
     <div class="popup-actions">
       <button id="popupCancel" class="secondary">Cancel</button>
@@ -567,20 +590,19 @@
     }
   };
 
-  const STORAGE_KEY = "arlo_timetable_state_v1";
+  const STORAGE_KEY = "arlo_timetable_state_v2";
 
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { subjectColors: {}, subjectMeta: {}, lessonNotes: {} };
+      if (!raw) return { subjectMeta: {}, slotState: {} };
       const parsed = JSON.parse(raw);
       return {
-        subjectColors: parsed.subjectColors || {},
         subjectMeta: parsed.subjectMeta || {},
-        lessonNotes: parsed.lessonNotes || {}
+        slotState: parsed.slotState || parsed.lessonNotes || {}
       };
     } catch (e) {
-      return { subjectColors: {}, subjectMeta: {}, lessonNotes: {} };
+      return { subjectMeta: {}, slotState: {} };
     }
   }
 
@@ -590,42 +612,41 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
-  const DEFAULT_COLORS = [
-    "#22c55e", "#3b82f6", "#f97316", "#a855f7", "#e11d48",
-    "#facc15", "#2dd4bf", "#6366f1", "#14b8a6", "#ec4899"
-  ];
-
-  function defaultColorFor(subject) {
-    let hash = 0;
-    for (let i = 0; i < subject.length; i++) {
-      hash = (hash + subject.charCodeAt(i) * 7) % 1000;
-    }
-    return DEFAULT_COLORS[hash % DEFAULT_COLORS.length];
-  }
-
-  function getSubjectColor(subject) {
-    return state.subjectColors[subject] || defaultColorFor(subject);
-  }
-
   const days = Object.keys(timetable.days);
 
-  function getAllSubjects() {
-    const set = new Set();
-    days.forEach(dayName => {
-      const day = timetable.days[dayName];
-      timetable.periods.forEach(period => {
-        const slot = day[period.key];
-        if (!slot || period.special) return;
-        if (slot.subject === "Registration") return;
-        set.add(slot.subject);
+  function slotKeyFor(dayName, periodKey) {
+    return `${dayName}_${periodKey}`;
+  }
+
+  function buildCatchUpIndex() {
+    const index = {};
+    for (const [originKey, entry] of Object.entries(state.slotState)) {
+      if (!entry.catchUpSlots || !Array.isArray(entry.catchUpSlots)) continue;
+      entry.catchUpSlots.forEach(slotKey => {
+        if (!index[slotKey]) index[slotKey] = [];
+        index[slotKey].push(originKey);
       });
-    });
-    return Array.from(set).sort();
+    }
+    return index;
+  }
+
+  function describeSlotKey(slotKey) {
+    const [dayName, periodKey] = slotKey.split("_");
+    const period = timetable.periods.find(p => p.key === periodKey);
+    const dayData = timetable.days[dayName];
+    const slot = dayData ? dayData[periodKey] : null;
+
+    const base = period ? `${dayName} · ${period.name}` : slotKey;
+    if (slot && slot.subject) {
+      return `${slot.subject} (${base})`;
+    }
+    return base;
   }
 
   function renderGrid() {
     const tbody = document.getElementById("gridBody");
     tbody.innerHTML = "";
+    const catchUpIndex = buildCatchUpIndex();
 
     timetable.periods.forEach(period => {
       const tr = document.createElement("tr");
@@ -642,34 +663,29 @@
       days.forEach(dayName => {
         const dayData = timetable.days[dayName];
         const slot = dayData[period.key];
-        const td = document.createElement("td");
+        const key = slotKeyFor(dayName, period.key);
+        const slotState = state.slotState[key] || {};
+        const scheduledFor = catchUpIndex[key] || [];
+        const hasNotes = !!(slotState.notes && slotState.notes.trim().length > 0);
 
-        if (period.special) {
-          td.className = "cell-special";
-          td.textContent = period.name;
-        } else if (!slot) {
+        const td = document.createElement("td");
+        td.dataset.day = dayName;
+        td.dataset.period = period.key;
+        td.addEventListener("click", () => openSlotPopup(dayName, period.key));
+
+        if (!slot && !period.special) {
           td.className = "cell-empty";
           td.innerHTML = "<span>–</span>";
+        } else if (period.special) {
+          td.className = "cell-special";
+          td.textContent = period.name;
         } else {
+          td.className = "cell-lesson";
           const subject = slot.subject;
           const room = slot.room || "";
-
-          td.className = "cell-lesson";
-          td.dataset.day = dayName;
-          td.dataset.period = period.key;
-          td.dataset.subject = subject;
-
-          const color = getSubjectColor(subject);
-          td.style.setProperty("--subject-color", color);
-          td.classList.add("has-color");
-
           const subjectMeta = state.subjectMeta[subject] || {};
           const isFavSubject = !!subjectMeta.favourite;
-
-          const lessonKey = `${dayName}_${period.key}`;
-          const lessonState = state.lessonNotes[lessonKey] || {};
-          const needsCatchUp = !!lessonState.needsCatchUp;
-          const hasNotes = !!(lessonState.notes && lessonState.notes.trim().length > 0);
+          const needsCatchUp = !!slotState.needsCatchUp;
 
           td.innerHTML = `
             <div class="subject-row">
@@ -681,65 +697,28 @@
               ${needsCatchUp ? `<span class="flag catchup-flag">Catch up</span>` : ""}
             </div>
           `;
+        }
 
-          if (hasNotes) {
-            const notesHint = document.createElement("div");
-            notesHint.className = "notes-hint";
-            notesHint.textContent = "Notes saved";
-            td.appendChild(notesHint);
-          }
+        if (hasNotes) {
+          const notesHint = document.createElement("div");
+          notesHint.className = "notes-hint";
+          notesHint.textContent = "Notes saved";
+          td.appendChild(notesHint);
+        }
 
-          td.addEventListener("click", () => openLessonPopup(dayName, period.key));
+        if (scheduledFor.length > 0) {
+          const hint = document.createElement("div");
+          hint.className = "catchup-target-hint";
+          hint.textContent = scheduledFor.length === 1
+            ? "Catch-up scheduled here"
+            : `${scheduledFor.length} catch-ups scheduled here`;
+          td.appendChild(hint);
         }
 
         tr.appendChild(td);
       });
 
       tbody.appendChild(tr);
-    });
-  }
-
-  function renderSubjectPanel() {
-    const container = document.getElementById("subjectPanel");
-    container.innerHTML = "";
-    const subjects = getAllSubjects();
-
-    subjects.forEach(subject => {
-      const wrapper = document.createElement("div");
-      wrapper.className = "subject-config";
-
-      const label = document.createElement("span");
-      label.className = "label";
-      label.textContent = subject;
-
-      const colorInput = document.createElement("input");
-      colorInput.type = "color";
-      colorInput.value = getSubjectColor(subject);
-      colorInput.addEventListener("input", e => {
-        state.subjectColors[subject] = e.target.value;
-        saveState();
-        renderGrid();
-      });
-
-      if (!state.subjectMeta) state.subjectMeta = {};
-      const isFav = !!(state.subjectMeta[subject] && state.subjectMeta[subject].favourite);
-
-      const favBtn = document.createElement("button");
-      favBtn.className = "fav-toggle" + (isFav ? " is-fav" : "");
-      favBtn.textContent = isFav ? "★" : "☆";
-      favBtn.title = "Toggle favourite subject";
-      favBtn.addEventListener("click", () => {
-        if (!state.subjectMeta[subject]) state.subjectMeta[subject] = {};
-        state.subjectMeta[subject].favourite = !state.subjectMeta[subject].favourite;
-        saveState();
-        renderSubjectPanel();
-        renderGrid();
-      });
-
-      wrapper.appendChild(label);
-      wrapper.appendChild(colorInput);
-      wrapper.appendChild(favBtn);
-      container.appendChild(wrapper);
     });
   }
 
@@ -752,54 +731,178 @@
   const popupFavSubjectEl = document.getElementById("popupFavouriteSubject");
   const popupNeedsCatchupEl = document.getElementById("popupNeedsCatchup");
   const popupNotesEl = document.getElementById("popupNotes");
+  const favRow = document.getElementById("popupFavRow");
+  const needsRow = document.getElementById("popupNeedsRow");
+  const catchupSection = document.getElementById("popupCatchupSection");
+  const scheduledForSection = document.getElementById("popupScheduledForSection");
+  const scheduledForListEl = document.getElementById("scheduledForList");
 
-  let currentLessonInfo = null;
+  const catchupDaySelect = document.getElementById("catchupDaySelect");
+  const catchupPeriodSelect = document.getElementById("catchupPeriodSelect");
+  const catchupListEl = document.getElementById("catchupList");
+  const catchupAddBtn = document.getElementById("catchupAddBtn");
 
-  function openLessonPopup(day, periodKey) {
+  // Populate selects once
+  days.forEach(day => {
+    const opt = document.createElement("option");
+    opt.value = day;
+    opt.textContent = day;
+    catchupDaySelect.appendChild(opt);
+  });
+
+  timetable.periods.forEach(period => {
+    const opt = document.createElement("option");
+    opt.value = period.key;
+    opt.textContent = `${period.name} (${period.start}–${period.end})`;
+    catchupPeriodSelect.appendChild(opt);
+  });
+
+  let currentSlotKey = null;
+  let currentIsLesson = false;
+  let currentSubject = null;
+  let currentCatchUpSlots = [];
+
+  function renderCatchupList() {
+    catchupListEl.innerHTML = "";
+    if (!currentIsLesson) return;
+    if (!currentCatchUpSlots || currentCatchUpSlots.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "catchup-empty";
+      empty.textContent = "No catch-up times set yet.";
+      catchupListEl.appendChild(empty);
+      return;
+    }
+
+    currentCatchUpSlots.forEach(slotKey => {
+      const item = document.createElement("div");
+      item.className = "catchup-item";
+      const label = document.createElement("span");
+      label.textContent = describeSlotKey(slotKey);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "catchup-remove-btn";
+      btn.textContent = "Remove";
+      btn.addEventListener("click", () => {
+        currentCatchUpSlots = currentCatchUpSlots.filter(k => k !== slotKey);
+        renderCatchupList();
+      });
+      item.appendChild(label);
+      item.appendChild(btn);
+      catchupListEl.appendChild(item);
+    });
+  }
+
+  catchupAddBtn.addEventListener("click", () => {
+    if (!currentIsLesson) return;
+    const day = catchupDaySelect.value;
+    const periodKey = catchupPeriodSelect.value;
+    const key = slotKeyFor(day, periodKey);
+    if (!currentCatchUpSlots.includes(key)) {
+      currentCatchUpSlots.push(key);
+      renderCatchupList();
+    }
+  });
+
+  function renderScheduledForList(originKeys) {
+    scheduledForListEl.innerHTML = "";
+    if (!originKeys || originKeys.length === 0) {
+      scheduledForSection.style.display = "none";
+      return;
+    }
+    scheduledForSection.style.display = "block";
+    originKeys.forEach(originKey => {
+      const item = document.createElement("div");
+      item.className = "catchup-item";
+      const label = document.createElement("span");
+      label.textContent = describeSlotKey(originKey);
+      item.appendChild(label);
+      scheduledForListEl.appendChild(item);
+    });
+  }
+
+  function openSlotPopup(day, periodKey) {
     const period = timetable.periods.find(p => p.key === periodKey);
-    const slot = timetable.days[day][periodKey];
-    if (!slot) return;
+    const dayData = timetable.days[day];
+    const slot = dayData[periodKey];
+    const key = slotKeyFor(day, periodKey);
+    const slotState = state.slotState[key] || {};
+    const catchUpIndex = buildCatchUpIndex();
+    const scheduledForHere = catchUpIndex[key] || [];
 
-    const subject = slot.subject;
-    const room = slot.room || "";
+    currentSlotKey = key;
+    currentSubject = slot && slot.subject ? slot.subject : null;
+    currentIsLesson = !!slot && !period.special && !!slot.subject;
+
     const whenText = `${day} · ${period.name} · ${period.start} – ${period.end}`;
 
-    popupTitleEl.textContent = subject;
-    popupSubjectEl.textContent = `Subject: ${subject}`;
+    if (currentIsLesson) {
+      popupTitleEl.textContent = slot.subject;
+      popupSubjectEl.textContent = `Subject: ${slot.subject}`;
+      popupRoomEl.textContent = slot.room ? `Room: ${slot.room}` : "Room: (not specified)";
+    } else if (slot && slot.subject) {
+      popupTitleEl.textContent = slot.subject;
+      popupSubjectEl.textContent = `Time slot: ${slot.subject}`;
+      popupRoomEl.textContent = "Room: (not applicable)";
+    } else if (period.special) {
+      popupTitleEl.textContent = period.name;
+      popupSubjectEl.textContent = `Time slot: ${period.name}`;
+      popupRoomEl.textContent = "Room: (not applicable)";
+    } else {
+      popupTitleEl.textContent = "Free / other time";
+      popupSubjectEl.textContent = "Time slot with no set lesson";
+      popupRoomEl.textContent = "";
+    }
+
     popupWhenEl.textContent = whenText;
-    popupRoomEl.textContent = room ? `Room: ${room}` : "Room: (not specified)";
+    popupNotesEl.value = slotState.notes || "";
 
-    const subjectMeta = state.subjectMeta[subject] || {};
-    popupFavSubjectEl.checked = !!subjectMeta.favourite;
+    if (currentIsLesson) {
+      const subjectMeta = state.subjectMeta[currentSubject] || {};
+      popupFavouriteSubjectEl.checked = !!subjectMeta.favourite;
+      popupNeedsCatchupEl.checked = !!slotState.needsCatchUp;
+      currentCatchUpSlots = Array.isArray(slotState.catchUpSlots)
+        ? [...slotState.catchUpSlots]
+        : [];
+      favRow.style.display = "flex";
+      needsRow.style.display = "flex";
+      catchupSection.style.display = "block";
+    } else {
+      popupFavouriteSubjectEl.checked = false;
+      popupNeedsCatchupEl.checked = false;
+      currentCatchUpSlots = [];
+      favRow.style.display = "none";
+      needsRow.style.display = "none";
+      catchupSection.style.display = "none";
+    }
 
-    const lessonKey = `${day}_${periodKey}`;
-    const lessonState = state.lessonNotes[lessonKey] || {};
-    popupNeedsCatchupEl.checked = !!lessonState.needsCatchUp;
-    popupNotesEl.value = lessonState.notes || "";
-
-    currentLessonInfo = { day, periodKey, subject, lessonKey };
+    renderCatchupList();
+    renderScheduledForList(scheduledForHere);
 
     overlayEl.classList.add("visible");
   }
 
   function closeLessonPopup() {
     overlayEl.classList.remove("visible");
-    currentLessonInfo = null;
+    currentSlotKey = null;
+    currentSubject = null;
+    currentCatchUpSlots = [];
   }
 
   document.getElementById("popupSave").addEventListener("click", () => {
-    if (!currentLessonInfo) return;
-    const { subject, lessonKey } = currentLessonInfo;
+    if (!currentSlotKey) return;
 
-    if (!state.subjectMeta[subject]) state.subjectMeta[subject] = {};
-    state.subjectMeta[subject].favourite = popupFavSubjectEl.checked;
+    if (!state.slotState[currentSlotKey]) state.slotState[currentSlotKey] = {};
+    const entry = state.slotState[currentSlotKey];
+    entry.notes = popupNotesEl.value;
 
-    if (!state.lessonNotes[lessonKey]) state.lessonNotes[lessonKey] = {};
-    state.lessonNotes[lessonKey].needsCatchUp = popupNeedsCatchupEl.checked;
-    state.lessonNotes[lessonKey].notes = popupNotesEl.value;
+    if (currentIsLesson && currentSubject) {
+      if (!state.subjectMeta[currentSubject]) state.subjectMeta[currentSubject] = {};
+      state.subjectMeta[currentSubject].favourite = popupFavouriteSubjectEl.checked;
+      entry.needsCatchUp = popupNeedsCatchupEl.checked;
+      entry.catchUpSlots = currentCatchUpSlots;
+    }
 
     saveState();
-    renderSubjectPanel();
     renderGrid();
     closeLessonPopup();
   });
@@ -815,7 +918,6 @@
 
   // Initial render
   renderGrid();
-  renderSubjectPanel();
 </script>
 </body>
 </html>
