@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Arlo - Year 8 Timetable (Grid)</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+    }
+
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1100px;
+      background: #020617;
+      border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.65);
+      padding: 20px 24px 26px;
+      box-sizing: border-box;
+      border: 1px solid #1f2937;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 14px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    header span {
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    thead {
+      background: #111827;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #1f2937;
+      vertical-align: top;
+    }
+
+    th {
+      font-weight: 600;
+      color: #d1d5db;
+      text-align: center;
+    }
+
+    th:first-child {
+      text-align: left;
+      width: 170px;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: #030712;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #020617;
+    }
+
+    tr.special-row {
+      background: #020617;
+    }
+
+    td.period-col {
+      background: #020617;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
+
+    .period-name {
+      font-weight: 600;
+    }
+
+    .period-time {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    td.cell-empty {
+      text-align: center;
+      color: #4b5563;
+      font-style: italic;
+    }
+
+    td.cell-special {
+      text-align: center;
+      color: #9ca3af;
+      font-style: italic;
+      background: #020617;
+    }
+
+    td.cell-lesson {
+      cursor: pointer;
+      position: relative;
+      padding: 7px 8px;
+      border-left: 3px solid transparent;
+      transition: background 0.08s, transform 0.05s, box-shadow 0.08s, border-color 0.08s;
+    }
+
+    td.cell-lesson.has-color {
+      border-left-color: var(--subject-color);
+    }
+
+    td.cell-lesson:hover {
+      background: #111827;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+      z-index: 2;
+    }
+
+    .subject-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+      align-items: baseline;
+    }
+
+    .subject-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .room-tag {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid #374151;
+      white-space: nowrap;
+    }
+
+    .cell-flags {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+      min-height: 1.1em;
+    }
+
+    .flag {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .fav-flag {
+      border-color: #facc15;
+      color: #facc15;
+    }
+
+    .catchup-flag {
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .notes-hint {
+      margin-top: 4px;
+      font-size: 0.7rem;
+      color: #22c55e;
+    }
+
+    /* Subject configuration panel */
+    .subject-panel {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed #374151;
+    }
+
+    .subject-panel h2 {
+      font-size: 0.95rem;
+      margin: 0 0 8px;
+      color: #9ca3af;
+    }
+
+    .subject-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .subject-config {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid #111827;
+      font-size: 0.8rem;
+    }
+
+    .subject-config span.label {
+      white-space: nowrap;
+    }
+
+    .subject-config input[type="color"] {
+      width: 26px;
+      height: 20px;
+      border-radius: 999px;
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .fav-toggle {
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #020617;
+      color: #e5e7eb;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.08s, border-color 0.08s;
+    }
+
+    .fav-toggle.is-fav {
+      border-color: #facc15;
+      background: #facc15;
+      color: #111827;
+    }
+
+    .subject-panel-note {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .footer-note {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    /* Popup overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .overlay.visible {
+      display: flex;
+    }
+
+    .overlay-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+    }
+
+    .lesson-popup {
+      position: relative;
+      background: #020617;
+      border-radius: 16px;
+      padding: 16px 18px 14px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+      border: 1px solid #1f2937;
+      z-index: 1;
+    }
+
+    .lesson-popup h2 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    .popup-meta {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+
+    .popup-meta div + div {
+      margin-top: 2px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      font-size: 0.85rem;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #22c55e;
+      cursor: pointer;
+    }
+
+    .notes-label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 0.85rem;
+    }
+
+    textarea {
+      border-radius: 8px;
+      border: 1px solid #374151;
+      padding: 6px 8px;
+      background: #020617;
+      color: #e5e7eb;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+
+    .popup-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .popup-actions button {
+      border-radius: 999px;
+      padding: 6px 14px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    #popupSave {
+      background: #22c55e;
+      color: #022c22;
+      font-weight: 600;
+    }
+
+    #popupCancel {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      border: none;
+      background: transparent;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .close-btn:hover {
+      color: #e5e7eb;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .app {
+        padding: 14px 10px 18px;
+      }
+      th, td {
+        padding: 6px 4px;
+        font-size: 0.8rem;
+      }
+      .room-tag {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Arlo M &middot; Year 8 Timetable</h1>
+    <span>Click a lesson to add notes, favourites and catch-up flags.</span>
+  </header>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Period / Time</th>
+        <th>Monday</th>
+        <th>Tuesday</th>
+        <th>Wednesday</th>
+        <th>Thursday</th>
+        <th>Friday</th>
+      </tr>
+    </thead>
+    <tbody id="gridBody"></tbody>
+  </table>
+
+  <div class="subject-panel">
+    <h2>Subject colours & favourites</h2>
+    <div id="subjectPanel" class="subject-list"></div>
+    <div class="subject-panel-note">
+      Pick a colour for each subject and toggle the star to mark favourites.
+      Notes and catch-up flags are stored per lesson.
+    </div>
+  </div>
+
+  <div class="footer-note">
+    All settings are saved in this browser using local storage.  
+    Use on the same device for everything to stick.
+  </div>
+</div>
+
+<!-- Popup overlay -->
+<div id="lessonOverlay" class="overlay">
+  <div class="overlay-backdrop"></div>
+  <div class="lesson-popup">
+    <button class="close-btn" id="popupClose" aria-label="Close">&times;</button>
+    <h2 id="popupTitle">Lesson details</h2>
+    <div class="popup-meta">
+      <div id="popupSubject"></div>
+      <div id="popupWhen"></div>
+      <div id="popupRoom"></div>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="popupFavouriteSubject">
+      <span>Mark this subject as a favourite</span>
+    </label>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="popupNeedsCatchup">
+      <span>This lesson needs catching up</span>
+    </label>
+
+    <label class="notes-label">
+      <span>Notes about this lesson</span>
+      <textarea id="popupNotes"
+                placeholder="What was this lesson about? Homework, tests, anything that needs catching up..."></textarea>
+    </label>
+
+    <div class="popup-actions">
+      <button id="popupCancel" class="secondary">Cancel</button>
+      <button id="popupSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const timetable = {
+    student: "Arlo M",
+    year: "8",
+    periods: [
+      { key: "reg",   name: "Registration", start: "08:45", end: "09:05" },
+      { key: "l1",    name: "Lesson 1",     start: "09:05", end: "09:55" },
+      { key: "l2",    name: "Lesson 2",     start: "09:55", end: "10:45" },
+      { key: "break", name: "Break",        start: "10:45", end: "11:05", special: true },
+      { key: "l3",    name: "Lesson 3",     start: "11:05", end: "11:55" },
+      { key: "l4",    name: "Lesson 4",     start: "11:55", end: "12:45" },
+      { key: "lunch", name: "Lunch",        start: "12:45", end: "13:35", special: true },
+      { key: "l5",    name: "Lesson 5",     start: "13:35", end: "14:25" },
+      { key: "l6",    name: "Lesson 6",     start: "14:25", end: "15:15" },
+      { key: "tutor", name: "Tutor Time",   start: "15:15", end: "15:20", special: true }
+    ],
+    days: {
+      "Monday": {
+        reg:   { subject: "Registration", room: null },
+        l1:    { subject: "Art",   room: "PHA 901" },
+        l2:    { subject: "Eng",   room: "JGR 304" },
+        break: null,
+        l3:    { subject: "Sci",   room: "KTU 308" },
+        l4:    { subject: "Maths", room: "VWA 303" },
+        lunch: null,
+        l5:    { subject: "Music", room: "Chapel" },
+        l6:    { subject: "DT",    room: "ADB 704" },
+        tutor: null
+      },
+      "Tuesday": {
+        reg:   { subject: "Registration", room: null },
+        l1:    { subject: "Eng",       room: "JGR 304" },
+        l2:    { subject: "Computing", room: "APR 904" },
+        break: null,
+        l3:    { subject: "H. Cook",   room: "AJO 601" },
+        l4:    { subject: "PE",        room: "COT 505" },
+        lunch: null,
+        l5:    { subject: "Maths",     room: "VWA 303" },
+        l6:    { subject: "P. Arts",   room: "RDO 1608" },
+        tutor: null
+      },
+      "Wednesday": {
+        reg:   { subject: "Registration", room: null },
+        l1:    { subject: "Hums",  room: "MCO 407" },
+        l2:    { subject: "Com",   room: "RPA 307" },
+        break: null,
+        l3:    { subject: "Eng",   room: "JGR 304" },
+        l4:    { subject: "Maths", room: "VWA 303" },
+        lunch: null,
+        l5:    { subject: "Hums",  room: "MCO 407" },
+        l6:    { subject: "Sci",   room: "KTU 308" },
+        tutor: null
+      },
+      "Thursday": {
+        reg:   { subject: "Registration", room: null },
+        l1:    { subject: "DT",   room: "ADB 704" },
+        l2:    { subject: "Eng",  room: "JGR 304" },
+        break: null,
+        l3:    { subject: "PE",   room: "COT 509" },
+        l4:    { subject: "Maths",room: "VWA 303" },
+        lunch: null,
+        l5:    { subject: "Sci",  room: "KTU 308" },
+        l6:    { subject: "PE",   room: "COT 505" },
+        tutor: null
+      },
+      "Friday": {
+        reg:   { subject: "Registration", room: null },
+        l1:    { subject: "Computing",          room: "APR 904" },
+        l2:    { subject: "Citizen",            room: "EDO 406" },
+        break: null,
+        l3:    { subject: "Maths",              room: "VWA 303" },
+        l4:    { subject: "Eng",                room: "JGR 304" },
+        lunch: null,
+        l5:    { subject: "Leisure Curriculum", room: null },
+        l6:    null,
+        tutor: null
+      }
+    }
+  };
+
+  const STORAGE_KEY = "arlo_timetable_state_v1";
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { subjectColors: {}, subjectMeta: {}, lessonNotes: {} };
+      const parsed = JSON.parse(raw);
+      return {
+        subjectColors: parsed.subjectColors || {},
+        subjectMeta: parsed.subjectMeta || {},
+        lessonNotes: parsed.lessonNotes || {}
+      };
+    } catch (e) {
+      return { subjectColors: {}, subjectMeta: {}, lessonNotes: {} };
+    }
+  }
+
+  let state = loadState();
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  const DEFAULT_COLORS = [
+    "#22c55e", "#3b82f6", "#f97316", "#a855f7", "#e11d48",
+    "#facc15", "#2dd4bf", "#6366f1", "#14b8a6", "#ec4899"
+  ];
+
+  function defaultColorFor(subject) {
+    let hash = 0;
+    for (let i = 0; i < subject.length; i++) {
+      hash = (hash + subject.charCodeAt(i) * 7) % 1000;
+    }
+    return DEFAULT_COLORS[hash % DEFAULT_COLORS.length];
+  }
+
+  function getSubjectColor(subject) {
+    return state.subjectColors[subject] || defaultColorFor(subject);
+  }
+
+  const days = Object.keys(timetable.days);
+
+  function getAllSubjects() {
+    const set = new Set();
+    days.forEach(dayName => {
+      const day = timetable.days[dayName];
+      timetable.periods.forEach(period => {
+        const slot = day[period.key];
+        if (!slot || period.special) return;
+        if (slot.subject === "Registration") return;
+        set.add(slot.subject);
+      });
+    });
+    return Array.from(set).sort();
+  }
+
+  function renderGrid() {
+    const tbody = document.getElementById("gridBody");
+    tbody.innerHTML = "";
+
+    timetable.periods.forEach(period => {
+      const tr = document.createElement("tr");
+      if (period.special) tr.classList.add("special-row");
+
+      const periodCell = document.createElement("td");
+      periodCell.className = "period-col";
+      periodCell.innerHTML = `
+        <div class="period-name">${period.name}</div>
+        <div class="period-time">${period.start} – ${period.end}</div>
+      `;
+      tr.appendChild(periodCell);
+
+      days.forEach(dayName => {
+        const dayData = timetable.days[dayName];
+        const slot = dayData[period.key];
+        const td = document.createElement("td");
+
+        if (period.special) {
+          td.className = "cell-special";
+          td.textContent = period.name;
+        } else if (!slot) {
+          td.className = "cell-empty";
+          td.innerHTML = "<span>–</span>";
+        } else {
+          const subject = slot.subject;
+          const room = slot.room || "";
+
+          td.className = "cell-lesson";
+          td.dataset.day = dayName;
+          td.dataset.period = period.key;
+          td.dataset.subject = subject;
+
+          const color = getSubjectColor(subject);
+          td.style.setProperty("--subject-color", color);
+          td.classList.add("has-color");
+
+          const subjectMeta = state.subjectMeta[subject] || {};
+          const isFavSubject = !!subjectMeta.favourite;
+
+          const lessonKey = `${dayName}_${period.key}`;
+          const lessonState = state.lessonNotes[lessonKey] || {};
+          const needsCatchUp = !!lessonState.needsCatchUp;
+          const hasNotes = !!(lessonState.notes && lessonState.notes.trim().length > 0);
+
+          td.innerHTML = `
+            <div class="subject-row">
+              <span class="subject-name">${subject}</span>
+              ${room ? `<span class="room-tag">${room}</span>` : ""}
+            </div>
+            <div class="cell-flags">
+              ${isFavSubject ? `<span class="flag fav-flag">★ Favourite</span>` : ""}
+              ${needsCatchUp ? `<span class="flag catchup-flag">Catch up</span>` : ""}
+            </div>
+          `;
+
+          if (hasNotes) {
+            const notesHint = document.createElement("div");
+            notesHint.className = "notes-hint";
+            notesHint.textContent = "Notes saved";
+            td.appendChild(notesHint);
+          }
+
+          td.addEventListener("click", () => openLessonPopup(dayName, period.key));
+        }
+
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderSubjectPanel() {
+    const container = document.getElementById("subjectPanel");
+    container.innerHTML = "";
+    const subjects = getAllSubjects();
+
+    subjects.forEach(subject => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "subject-config";
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = subject;
+
+      const colorInput = document.createElement("input");
+      colorInput.type = "color";
+      colorInput.value = getSubjectColor(subject);
+      colorInput.addEventListener("input", e => {
+        state.subjectColors[subject] = e.target.value;
+        saveState();
+        renderGrid();
+      });
+
+      if (!state.subjectMeta) state.subjectMeta = {};
+      const isFav = !!(state.subjectMeta[subject] && state.subjectMeta[subject].favourite);
+
+      const favBtn = document.createElement("button");
+      favBtn.className = "fav-toggle" + (isFav ? " is-fav" : "");
+      favBtn.textContent = isFav ? "★" : "☆";
+      favBtn.title = "Toggle favourite subject";
+      favBtn.addEventListener("click", () => {
+        if (!state.subjectMeta[subject]) state.subjectMeta[subject] = {};
+        state.subjectMeta[subject].favourite = !state.subjectMeta[subject].favourite;
+        saveState();
+        renderSubjectPanel();
+        renderGrid();
+      });
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(colorInput);
+      wrapper.appendChild(favBtn);
+      container.appendChild(wrapper);
+    });
+  }
+
+  // Popup logic
+  const overlayEl = document.getElementById("lessonOverlay");
+  const popupTitleEl = document.getElementById("popupTitle");
+  const popupSubjectEl = document.getElementById("popupSubject");
+  const popupWhenEl = document.getElementById("popupWhen");
+  const popupRoomEl = document.getElementById("popupRoom");
+  const popupFavSubjectEl = document.getElementById("popupFavouriteSubject");
+  const popupNeedsCatchupEl = document.getElementById("popupNeedsCatchup");
+  const popupNotesEl = document.getElementById("popupNotes");
+
+  let currentLessonInfo = null;
+
+  function openLessonPopup(day, periodKey) {
+    const period = timetable.periods.find(p => p.key === periodKey);
+    const slot = timetable.days[day][periodKey];
+    if (!slot) return;
+
+    const subject = slot.subject;
+    const room = slot.room || "";
+    const whenText = `${day} · ${period.name} · ${period.start} – ${period.end}`;
+
+    popupTitleEl.textContent = subject;
+    popupSubjectEl.textContent = `Subject: ${subject}`;
+    popupWhenEl.textContent = whenText;
+    popupRoomEl.textContent = room ? `Room: ${room}` : "Room: (not specified)";
+
+    const subjectMeta = state.subjectMeta[subject] || {};
+    popupFavSubjectEl.checked = !!subjectMeta.favourite;
+
+    const lessonKey = `${day}_${periodKey}`;
+    const lessonState = state.lessonNotes[lessonKey] || {};
+    popupNeedsCatchupEl.checked = !!lessonState.needsCatchUp;
+    popupNotesEl.value = lessonState.notes || "";
+
+    currentLessonInfo = { day, periodKey, subject, lessonKey };
+
+    overlayEl.classList.add("visible");
+  }
+
+  function closeLessonPopup() {
+    overlayEl.classList.remove("visible");
+    currentLessonInfo = null;
+  }
+
+  document.getElementById("popupSave").addEventListener("click", () => {
+    if (!currentLessonInfo) return;
+    const { subject, lessonKey } = currentLessonInfo;
+
+    if (!state.subjectMeta[subject]) state.subjectMeta[subject] = {};
+    state.subjectMeta[subject].favourite = popupFavSubjectEl.checked;
+
+    if (!state.lessonNotes[lessonKey]) state.lessonNotes[lessonKey] = {};
+    state.lessonNotes[lessonKey].needsCatchUp = popupNeedsCatchupEl.checked;
+    state.lessonNotes[lessonKey].notes = popupNotesEl.value;
+
+    saveState();
+    renderSubjectPanel();
+    renderGrid();
+    closeLessonPopup();
+  });
+
+  document.getElementById("popupCancel").addEventListener("click", closeLessonPopup);
+  document.getElementById("popupClose").addEventListener("click", closeLessonPopup);
+
+  overlayEl.addEventListener("click", e => {
+    if (e.target === overlayEl || e.target.classList.contains("overlay-backdrop")) {
+      closeLessonPopup();
+    }
+  });
+
+  // Initial render
+  renderGrid();
+  renderSubjectPanel();
+</script>
+</body>
+</html>
