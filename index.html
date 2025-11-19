@@ -62,7 +62,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       font-size: 0.9rem;
       color: #e5e7eb;
     }
@@ -83,6 +83,18 @@
 
     #weekLabel {
       font-weight: 500;
+    }
+
+    .catchup-summary {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #111827;
+      border: 1px solid #374151;
+      color: #facc15;
+      font-weight: 600;
     }
 
     table {
@@ -241,6 +253,11 @@
     .catchup-flag {
       border-color: #ef4444;
       color: #ef4444;
+    }
+
+    .missed-flag {
+      border-color: #dc2626;
+      color: #fecaca;
     }
 
     .notes-hint {
@@ -493,6 +510,10 @@
     <button id="nextWeek">&rarr;</button>
   </div>
 
+  <div id="catchupSummary" class="catchup-summary">
+    Catch-up pieces needed this week: 0
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -567,6 +588,11 @@
     <div id="popupNeedsRow" class="checkbox-row">
       <input type="checkbox" id="popupNeedsCatchup">
       <span>This lesson needs catching up</span>
+    </div>
+
+    <div id="popupMissedRow" class="checkbox-row">
+      <input type="checkbox" id="popupMissedLesson">
+      <span>Lesson was missed</span>
     </div>
 
     <label class="notes-label">
@@ -722,9 +748,11 @@
   const popupRoomEl = document.getElementById("popupRoom");
   const popupFavouriteSubjectEl = document.getElementById("popupFavouriteSubject");
   const popupNeedsCatchupEl = document.getElementById("popupNeedsCatchup");
+  const popupMissedLessonEl = document.getElementById("popupMissedLesson");
   const popupNotesEl = document.getElementById("popupNotes");
   const favRow = document.getElementById("popupFavRow");
   const needsRow = document.getElementById("popupNeedsRow");
+  const missedRow = document.getElementById("popupMissedRow");
   const catchupSection = document.getElementById("popupCatchupSection");
   const scheduledForSection = document.getElementById("popupScheduledForSection");
   const scheduledForListEl = document.getElementById("scheduledForList");
@@ -739,6 +767,7 @@
   const weekLabelEl = document.getElementById("weekLabel");
   const prevWeekBtn = document.getElementById("prevWeek");
   const nextWeekBtn = document.getElementById("nextWeek");
+  const catchupSummaryEl = document.getElementById("catchupSummary");
 
   // populate catch-up selects once
   days.forEach(day => {
@@ -918,18 +947,22 @@
       const subjectMeta = state.subjectMeta[currentSubject] || {};
       popupFavouriteSubjectEl.checked = !!subjectMeta.favourite;
       popupNeedsCatchupEl.checked = !!slotState.needsCatchUp;
+      popupMissedLessonEl.checked = !!slotState.missed;
       currentCatchUpSlots = Array.isArray(slotState.catchUpSlots)
         ? slotState.catchUpSlots.slice()
         : [];
       favRow.style.display = "flex";
       needsRow.style.display = "flex";
+      missedRow.style.display = "flex";
       catchupSection.style.display = "block";
     } else {
       popupFavouriteSubjectEl.checked = false;
       popupNeedsCatchupEl.checked = false;
+      popupMissedLessonEl.checked = false;
       currentCatchUpSlots = [];
       favRow.style.display = "none";
       needsRow.style.display = "none";
+      missedRow.style.display = "none";
       catchupSection.style.display = "none";
     }
 
@@ -957,6 +990,7 @@
       if (!state.subjectMeta[currentSubject]) state.subjectMeta[currentSubject] = {};
       state.subjectMeta[currentSubject].favourite = popupFavouriteSubjectEl.checked;
       entry.needsCatchUp = popupNeedsCatchupEl.checked;
+      entry.missed = popupMissedLessonEl.checked;
       entry.catchUpSlots = currentCatchUpSlots.slice();
     }
 
@@ -971,6 +1005,16 @@
       closeLessonPopup();
     }
   });
+
+  function updateCatchupSummary() {
+    let count = 0;
+    for (const key in state.slotState) {
+      const entry = state.slotState[key];
+      if (entry && entry.needsCatchUp) count++;
+    }
+    catchupSummaryEl.textContent =
+      "Catch-up pieces needed this week: " + count;
+  }
 
   function renderGrid() {
     const catchUpIndex = buildCatchUpIndex();
@@ -1014,6 +1058,7 @@
             const subjectMeta = state.subjectMeta[subject] || {};
             const isFavSubject = !!subjectMeta.favourite;
             const needsCatchUp = !!slotState.needsCatchUp;
+            const missed = !!slotState.missed;
             const subjectClass = "subject-name" + (isFavSubject ? " fav-subject" : "");
 
             td.innerHTML =
@@ -1022,6 +1067,7 @@
               </div>
               <div class="cell-flags">
                 ${needsCatchUp ? `<span class="flag catchup-flag">📖</span>` : ""}
+                ${missed ? `<span class="flag missed-flag">❌</span>` : ""}
               </div>`;
           }
 
@@ -1047,6 +1093,8 @@
 
       gridBody.appendChild(tr);
     });
+
+    updateCatchupSummary();
   }
 
   // ---- Week handling ----
