@@ -76,7 +76,7 @@
       vertical-align: top;
     }
 
-    /* vertical lines between periods */
+    /* vertical lines between period columns */
     thead th:not(:first-child),
     tbody td:not(.day-col) {
       border-left: 1px solid #1f2937;
@@ -91,6 +91,17 @@
     th:first-child {
       text-align: left;
       width: 130px;
+    }
+
+    /* thin Registration column */
+    th.reg-col {
+      width: 65px;
+      font-size: 0.75rem;
+    }
+
+    /* slightly wider Tutor Time */
+    th.tutor-col {
+      width: 140px;
     }
 
     tbody tr:nth-child(odd) {
@@ -151,6 +162,15 @@
 
     td.cell-lesson {
       padding: 7px 8px;
+    }
+
+    /* Registration cells: thin, not clickable */
+    td.reg-cell {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      background: #020617;
+      cursor: default;
     }
 
     .subject-row {
@@ -444,7 +464,7 @@
   <header>
     <div>
       <h1>Arlo M · Year 8 Timetable</h1>
-      <span>Click any slot to add notes, favourites and catch-up times.</span>
+      <span>Click any lesson, break or lunch to add notes, favourites and catch-up times.</span>
     </div>
     <span id="jsStatus">Connecting…</span>
   </header>
@@ -453,45 +473,45 @@
     <thead>
       <tr>
         <th>Day</th>
-        <th>
-          <div class="period-name">Registration</div>
-          <div class="period-time">08:45 – 09:05</div>
+        <th class="reg-col">
+          <div class="period-name">Reg</div>
+          <div class="period-time">08:45–09:05</div>
         </th>
         <th>
           <div class="period-name">Lesson 1</div>
-          <div class="period-time">09:05 – 09:55</div>
+          <div class="period-time">09:05–09:55</div>
         </th>
         <th>
           <div class="period-name">Lesson 2</div>
-          <div class="period-time">09:55 – 10:45</div>
+          <div class="period-time">09:55–10:45</div>
         </th>
         <th>
           <div class="period-name">Break</div>
-          <div class="period-time">10:45 – 11:05</div>
+          <div class="period-time">10:45–11:05</div>
         </th>
         <th>
           <div class="period-name">Lesson 3</div>
-          <div class="period-time">11:05 – 11:55</div>
+          <div class="period-time">11:05–11:55</div>
         </th>
         <th>
           <div class="period-name">Lesson 4</div>
-          <div class="period-time">11:55 – 12:45</div>
+          <div class="period-time">11:55–12:45</div>
         </th>
         <th>
           <div class="period-name">Lunch</div>
-          <div class="period-time">12:45 – 13:35</div>
+          <div class="period-time">12:45–13:35</div>
         </th>
         <th>
           <div class="period-name">Lesson 5</div>
-          <div class="period-time">13:35 – 14:25</div>
+          <div class="period-time">13:35–14:25</div>
         </th>
         <th>
           <div class="period-name">Lesson 6</div>
-          <div class="period-time">14:25 – 15:15</div>
+          <div class="period-time">14:25–15:15</div>
         </th>
-        <th>
+        <th class="tutor-col">
           <div class="period-name">Tutor Time</div>
-          <div class="period-time">15:15 – 15:20</div>
+          <div class="period-time">15:15–15:20</div>
         </th>
       </tr>
     </thead>
@@ -816,6 +836,10 @@
   }
 
   function openSlotPopup(day, periodKey) {
+    if (periodKey === "reg") {
+      return; // registration not selectable
+    }
+
     const period = timetable.periods.find(p => p.key === periodKey);
     const dayData = timetable.days[day];
     const slot = dayData[periodKey];
@@ -934,47 +958,54 @@
         const td = document.createElement("td");
         td.dataset.day = dayName;
         td.dataset.period = period.key;
-        td.addEventListener("click", () => openSlotPopup(dayName, period.key));
 
-        if (!slot && !period.special) {
-          td.className = "cell-empty";
-          td.innerHTML = "<span>–</span>";
-        } else if (period.special) {
-          td.className = "cell-special";
-          td.textContent = period.name;
+        if (period.key === "reg") {
+          td.className = "reg-cell";
+          td.textContent = "Reg";
+          // registration not clickable
         } else {
-          td.className = "cell-lesson";
-          const subject = slot.subject;
-          const room = slot.room || "";
-          const subjectMeta = state.subjectMeta[subject] || {};
-          const isFavSubject = !!subjectMeta.favourite;
-          const needsCatchUp = !!slotState.needsCatchUp;
+          td.addEventListener("click", () => openSlotPopup(dayName, period.key));
 
-          td.innerHTML =
-            `<div class="subject-row">
-              <span class="subject-name">${subject}</span>
-              ${room ? `<span class="room-tag">${room}</span>` : ""}
-            </div>
-            <div class="cell-flags">
-              ${isFavSubject ? `<span class="flag fav-flag">👍 Favourite</span>` : ""}
-              ${needsCatchUp ? `<span class="flag catchup-flag">Catch up</span>` : ""}
-            </div>`;
-        }
+          if (!slot && !period.special) {
+            td.className = "cell-empty";
+            td.innerHTML = "<span>–</span>";
+          } else if (period.special) {
+            td.className = "cell-special";
+            td.textContent = period.name;
+          } else {
+            td.className = "cell-lesson";
+            const subject = slot.subject;
+            const room = slot.room || "";
+            const subjectMeta = state.subjectMeta[subject] || {};
+            const isFavSubject = !!subjectMeta.favourite;
+            const needsCatchUp = !!slotState.needsCatchUp;
 
-        if (hasNotes) {
-          const notesHint = document.createElement("div");
-          notesHint.className = "notes-hint";
-          notesHint.textContent = "Notes saved";
-          td.appendChild(notesHint);
-        }
+            td.innerHTML =
+              `<div class="subject-row">
+                <span class="subject-name">${subject}</span>
+                ${room ? `<span class="room-tag">${room}</span>` : ""}
+              </div>
+              <div class="cell-flags">
+                ${isFavSubject ? `<span class="flag fav-flag">👍 Favourite</span>` : ""}
+                ${needsCatchUp ? `<span class="flag catchup-flag">Catch up</span>` : ""}
+              </div>`;
+          }
 
-        if (scheduledFor.length > 0) {
-          const hint = document.createElement("div");
-          hint.className = "catchup-target-hint";
-          hint.textContent = scheduledFor.length === 1
-            ? "Catch-up scheduled here"
-            : `${scheduledFor.length} catch-ups scheduled here`;
-          td.appendChild(hint);
+          if (hasNotes) {
+            const notesHint = document.createElement("div");
+            notesHint.className = "notes-hint";
+            notesHint.textContent = "Notes saved";
+            td.appendChild(notesHint);
+          }
+
+          if (scheduledFor.length > 0) {
+            const hint = document.createElement("div");
+            hint.className = "catchup-target-hint";
+            hint.textContent = scheduledFor.length === 1
+              ? "Catch-up scheduled here"
+              : `${scheduledFor.length} catch-ups scheduled here`;
+            td.appendChild(hint);
+          }
         }
 
         tr.appendChild(td);
