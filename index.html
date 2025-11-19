@@ -47,6 +47,15 @@
       color: #9ca3af;
     }
 
+    #jsStatus {
+      font-size: 0.8rem;
+      color: #f97316;
+    }
+
+    #jsStatus.ready {
+      color: #22c55e;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -108,34 +117,37 @@
       font-variant-numeric: tabular-nums;
     }
 
+    td.cell-empty,
+    td.cell-special,
+    td.cell-lesson {
+      cursor: pointer;
+      position: relative;
+      transition: background 0.08s, transform 0.05s, box-shadow 0.08s;
+    }
+
+    td.cell-empty:hover,
+    td.cell-special:hover,
+    td.cell-lesson:hover {
+      background: #111827;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+      z-index: 2;
+    }
+
     td.cell-empty {
       text-align: center;
       color: #4b5563;
       font-style: italic;
-      cursor: pointer;
     }
 
     td.cell-special {
       text-align: center;
       color: #9ca3af;
       font-style: italic;
-      cursor: pointer;
     }
 
     td.cell-lesson {
-      cursor: pointer;
-      position: relative;
       padding: 7px 8px;
-      transition: background 0.08s, transform 0.05s, box-shadow 0.08s;
-    }
-
-    td.cell-lesson:hover,
-    td.cell-empty:hover,
-    td.cell-special:hover {
-      background: #111827;
-      transform: translateY(-1px);
-      box-shadow: 0 8px 18px rgba(0,0,0,0.45);
-      z-index: 2;
     }
 
     .subject-row {
@@ -427,8 +439,11 @@
 <body>
 <div class="app">
   <header>
-    <h1>Arlo M · Year 8 Timetable</h1>
-    <span>Click any slot to add notes, favourites and catch-up times.</span>
+    <div>
+      <h1>Arlo M · Year 8 Timetable</h1>
+      <span>Click any slot to add notes, favourites and catch-up times.</span>
+    </div>
+    <span id="jsStatus">JS loading…</span>
   </header>
 
   <table>
@@ -511,9 +526,8 @@
 </div>
 
 <script>
+  // ---------- Data ---------------------------------------------------------
   const timetable = {
-    student: "Arlo M",
-    year: "8",
     periods: [
       { key: "reg",   name: "Registration", start: "08:45", end: "09:05" },
       { key: "l1",    name: "Lesson 1",     start: "09:05", end: "09:55" },
@@ -590,7 +604,12 @@
     }
   };
 
-  const STORAGE_KEY = "arlo_timetable_state_v2";
+  const STORAGE_KEY = "arlo_timetable_state_v3";
+  const days = Object.keys(timetable.days);
+
+  function slotKeyFor(dayName, periodKey) {
+    return dayName + "_" + periodKey;
+  }
 
   function loadState() {
     try {
@@ -599,29 +618,24 @@
       const parsed = JSON.parse(raw);
       return {
         subjectMeta: parsed.subjectMeta || {},
-        slotState: parsed.slotState || parsed.lessonNotes || {}
+        slotState: parsed.slotState || {}
       };
     } catch (e) {
       return { subjectMeta: {}, slotState: {} };
     }
   }
 
-  let state = loadState();
-
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
-  const days = Object.keys(timetable.days);
-
-  function slotKeyFor(dayName, periodKey) {
-    return `${dayName}_${periodKey}`;
-  }
+  let state = loadState();
 
   function buildCatchUpIndex() {
     const index = {};
-    for (const [originKey, entry] of Object.entries(state.slotState)) {
-      if (!entry.catchUpSlots || !Array.isArray(entry.catchUpSlots)) continue;
+    for (const originKey in state.slotState) {
+      const entry = state.slotState[originKey];
+      if (!entry || !Array.isArray(entry.catchUpSlots)) continue;
       entry.catchUpSlots.forEach(slotKey => {
         if (!index[slotKey]) index[slotKey] = [];
         index[slotKey].push(originKey);
@@ -631,104 +645,28 @@
   }
 
   function describeSlotKey(slotKey) {
-    const [dayName, periodKey] = slotKey.split("_");
+    const parts = slotKey.split("_");
+    const dayName = parts[0];
+    const periodKey = parts[1];
     const period = timetable.periods.find(p => p.key === periodKey);
     const dayData = timetable.days[dayName];
     const slot = dayData ? dayData[periodKey] : null;
-
-    const base = period ? `${dayName} · ${period.name}` : slotKey;
+    const base = dayName + " · " + (period ? period.name : periodKey);
     if (slot && slot.subject) {
-      return `${slot.subject} (${base})`;
+      return slot.subject + " (" + base + ")";
     }
     return base;
   }
 
-  function renderGrid() {
-    const tbody = document.getElementById("gridBody");
-    tbody.innerHTML = "";
-    const catchUpIndex = buildCatchUpIndex();
-
-    timetable.periods.forEach(period => {
-      const tr = document.createElement("tr");
-      if (period.special) tr.classList.add("special-row");
-
-      const periodCell = document.createElement("td");
-      periodCell.className = "period-col";
-      periodCell.innerHTML = `
-        <div class="period-name">${period.name}</div>
-        <div class="period-time">${period.start} – ${period.end}</div>
-      `;
-      tr.appendChild(periodCell);
-
-      days.forEach(dayName => {
-        const dayData = timetable.days[dayName];
-        const slot = dayData[period.key];
-        const key = slotKeyFor(dayName, period.key);
-        const slotState = state.slotState[key] || {};
-        const scheduledFor = catchUpIndex[key] || [];
-        const hasNotes = !!(slotState.notes && slotState.notes.trim().length > 0);
-
-        const td = document.createElement("td");
-        td.dataset.day = dayName;
-        td.dataset.period = period.key;
-        td.addEventListener("click", () => openSlotPopup(dayName, period.key));
-
-        if (!slot && !period.special) {
-          td.className = "cell-empty";
-          td.innerHTML = "<span>–</span>";
-        } else if (period.special) {
-          td.className = "cell-special";
-          td.textContent = period.name;
-        } else {
-          td.className = "cell-lesson";
-          const subject = slot.subject;
-          const room = slot.room || "";
-          const subjectMeta = state.subjectMeta[subject] || {};
-          const isFavSubject = !!subjectMeta.favourite;
-          const needsCatchUp = !!slotState.needsCatchUp;
-
-          td.innerHTML = `
-            <div class="subject-row">
-              <span class="subject-name">${subject}</span>
-              ${room ? `<span class="room-tag">${room}</span>` : ""}
-            </div>
-            <div class="cell-flags">
-              ${isFavSubject ? `<span class="flag fav-flag">★ Favourite</span>` : ""}
-              ${needsCatchUp ? `<span class="flag catchup-flag">Catch up</span>` : ""}
-            </div>
-          `;
-        }
-
-        if (hasNotes) {
-          const notesHint = document.createElement("div");
-          notesHint.className = "notes-hint";
-          notesHint.textContent = "Notes saved";
-          td.appendChild(notesHint);
-        }
-
-        if (scheduledFor.length > 0) {
-          const hint = document.createElement("div");
-          hint.className = "catchup-target-hint";
-          hint.textContent = scheduledFor.length === 1
-            ? "Catch-up scheduled here"
-            : `${scheduledFor.length} catch-ups scheduled here`;
-          td.appendChild(hint);
-        }
-
-        tr.appendChild(td);
-      });
-
-      tbody.appendChild(tr);
-    });
-  }
-
-  // Popup logic
+  // DOM refs (these EXIST in the markup above)
+  const jsStatusEl = document.getElementById("jsStatus");
+  const gridBody = document.getElementById("gridBody");
   const overlayEl = document.getElementById("lessonOverlay");
   const popupTitleEl = document.getElementById("popupTitle");
   const popupSubjectEl = document.getElementById("popupSubject");
   const popupWhenEl = document.getElementById("popupWhen");
   const popupRoomEl = document.getElementById("popupRoom");
-  const popupFavSubjectEl = document.getElementById("popupFavouriteSubject");
+  const popupFavouriteSubjectEl = document.getElementById("popupFavouriteSubject");
   const popupNeedsCatchupEl = document.getElementById("popupNeedsCatchup");
   const popupNotesEl = document.getElementById("popupNotes");
   const favRow = document.getElementById("popupFavRow");
@@ -736,24 +674,28 @@
   const catchupSection = document.getElementById("popupCatchupSection");
   const scheduledForSection = document.getElementById("popupScheduledForSection");
   const scheduledForListEl = document.getElementById("scheduledForList");
-
   const catchupDaySelect = document.getElementById("catchupDaySelect");
   const catchupPeriodSelect = document.getElementById("catchupPeriodSelect");
   const catchupListEl = document.getElementById("catchupList");
   const catchupAddBtn = document.getElementById("catchupAddBtn");
+  const popupSaveBtn = document.getElementById("popupSave");
+  const popupCancelBtn = document.getElementById("popupCancel");
+  const popupCloseBtn = document.getElementById("popupClose");
 
-  // Populate selects once
+  jsStatusEl.textContent = "JS ready";
+  jsStatusEl.classList.add("ready");
+
+  // populate selects once
   days.forEach(day => {
     const opt = document.createElement("option");
     opt.value = day;
     opt.textContent = day;
     catchupDaySelect.appendChild(opt);
   });
-
   timetable.periods.forEach(period => {
     const opt = document.createElement("option");
     opt.value = period.key;
-    opt.textContent = `${period.name} (${period.start}–${period.end})`;
+    opt.textContent = period.name + " (" + period.start + "–" + period.end + ")";
     catchupPeriodSelect.appendChild(opt);
   });
 
@@ -765,6 +707,7 @@
   function renderCatchupList() {
     catchupListEl.innerHTML = "";
     if (!currentIsLesson) return;
+
     if (!currentCatchUpSlots || currentCatchUpSlots.length === 0) {
       const empty = document.createElement("div");
       empty.className = "catchup-empty";
@@ -773,26 +716,29 @@
       return;
     }
 
-    currentCatchUpSlots.forEach(slotKey => {
+    currentCatchUpSlots.forEach(function (slotKey) {
       const item = document.createElement("div");
       item.className = "catchup-item";
+
       const label = document.createElement("span");
       label.textContent = describeSlotKey(slotKey);
+
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "catchup-remove-btn";
       btn.textContent = "Remove";
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", function () {
         currentCatchUpSlots = currentCatchUpSlots.filter(k => k !== slotKey);
         renderCatchupList();
       });
+
       item.appendChild(label);
       item.appendChild(btn);
       catchupListEl.appendChild(item);
     });
   }
 
-  catchupAddBtn.addEventListener("click", () => {
+  catchupAddBtn.addEventListener("click", function () {
     if (!currentIsLesson) return;
     const day = catchupDaySelect.value;
     const periodKey = catchupPeriodSelect.value;
@@ -810,7 +756,7 @@
       return;
     }
     scheduledForSection.style.display = "block";
-    originKeys.forEach(originKey => {
+    originKeys.forEach(function (originKey) {
       const item = document.createElement("div");
       item.className = "catchup-item";
       const label = document.createElement("span");
@@ -833,19 +779,19 @@
     currentSubject = slot && slot.subject ? slot.subject : null;
     currentIsLesson = !!slot && !period.special && !!slot.subject;
 
-    const whenText = `${day} · ${period.name} · ${period.start} – ${period.end}`;
+    const whenText = day + " · " + period.name + " · " + period.start + " – " + period.end;
 
     if (currentIsLesson) {
       popupTitleEl.textContent = slot.subject;
-      popupSubjectEl.textContent = `Subject: ${slot.subject}`;
-      popupRoomEl.textContent = slot.room ? `Room: ${slot.room}` : "Room: (not specified)";
+      popupSubjectEl.textContent = "Subject: " + slot.subject;
+      popupRoomEl.textContent = slot.room ? ("Room: " + slot.room) : "Room: (not specified)";
     } else if (slot && slot.subject) {
       popupTitleEl.textContent = slot.subject;
-      popupSubjectEl.textContent = `Time slot: ${slot.subject}`;
+      popupSubjectEl.textContent = "Time slot: " + slot.subject;
       popupRoomEl.textContent = "Room: (not applicable)";
     } else if (period.special) {
       popupTitleEl.textContent = period.name;
-      popupSubjectEl.textContent = `Time slot: ${period.name}`;
+      popupSubjectEl.textContent = "Time slot: " + period.name;
       popupRoomEl.textContent = "Room: (not applicable)";
     } else {
       popupTitleEl.textContent = "Free / other time";
@@ -856,12 +802,12 @@
     popupWhenEl.textContent = whenText;
     popupNotesEl.value = slotState.notes || "";
 
-    if (currentIsLesson) {
+    if (currentIsLesson && currentSubject) {
       const subjectMeta = state.subjectMeta[currentSubject] || {};
       popupFavouriteSubjectEl.checked = !!subjectMeta.favourite;
       popupNeedsCatchupEl.checked = !!slotState.needsCatchUp;
       currentCatchUpSlots = Array.isArray(slotState.catchUpSlots)
-        ? [...slotState.catchUpSlots]
+        ? slotState.catchUpSlots.slice()
         : [];
       favRow.style.display = "flex";
       needsRow.style.display = "flex";
@@ -888,7 +834,7 @@
     currentCatchUpSlots = [];
   }
 
-  document.getElementById("popupSave").addEventListener("click", () => {
+  popupSaveBtn.addEventListener("click", function () {
     if (!currentSlotKey) return;
 
     if (!state.slotState[currentSlotKey]) state.slotState[currentSlotKey] = {};
@@ -899,7 +845,7 @@
       if (!state.subjectMeta[currentSubject]) state.subjectMeta[currentSubject] = {};
       state.subjectMeta[currentSubject].favourite = popupFavouriteSubjectEl.checked;
       entry.needsCatchUp = popupNeedsCatchupEl.checked;
-      entry.catchUpSlots = currentCatchUpSlots;
+      entry.catchUpSlots = currentCatchUpSlots.slice();
     }
 
     saveState();
@@ -907,16 +853,93 @@
     closeLessonPopup();
   });
 
-  document.getElementById("popupCancel").addEventListener("click", closeLessonPopup);
-  document.getElementById("popupClose").addEventListener("click", closeLessonPopup);
-
-  overlayEl.addEventListener("click", e => {
+  popupCancelBtn.addEventListener("click", closeLessonPopup);
+  popupCloseBtn.addEventListener("click", closeLessonPopup);
+  overlayEl.addEventListener("click", function (e) {
     if (e.target === overlayEl || e.target.classList.contains("overlay-backdrop")) {
       closeLessonPopup();
     }
   });
 
-  // Initial render
+  function renderGrid() {
+    gridBody.innerHTML = "";
+    const catchUpIndex = buildCatchUpIndex();
+
+    timetable.periods.forEach(function (period) {
+      const tr = document.createElement("tr");
+      if (period.special) tr.classList.add("special-row");
+
+      const periodCell = document.createElement("td");
+      periodCell.className = "period-col";
+      periodCell.innerHTML =
+        '<div class="period-name">' + period.name + '</div>' +
+        '<div class="period-time">' + period.start + ' – ' + period.end + '</div>';
+      tr.appendChild(periodCell);
+
+      days.forEach(function (dayName) {
+        const dayData = timetable.days[dayName];
+        const slot = dayData[period.key];
+        const key = slotKeyFor(dayName, period.key);
+        const slotState = state.slotState[key] || {};
+        const scheduledFor = catchUpIndex[key] || [];
+        const hasNotes = !!(slotState.notes && slotState.notes.trim().length > 0);
+
+        const td = document.createElement("td");
+        td.dataset.day = dayName;
+        td.dataset.period = period.key;
+        td.addEventListener("click", function () {
+          openSlotPopup(dayName, period.key);
+        });
+
+        if (!slot && !period.special) {
+          td.className = "cell-empty";
+          td.innerHTML = "<span>–</span>";
+        } else if (period.special) {
+          td.className = "cell-special";
+          td.textContent = period.name;
+        } else {
+          td.className = "cell-lesson";
+          const subject = slot.subject;
+          const room = slot.room || "";
+          const subjectMeta = state.subjectMeta[subject] || {};
+          const isFavSubject = !!subjectMeta.favourite;
+          const needsCatchUp = !!slotState.needsCatchUp;
+
+          td.innerHTML =
+            '<div class="subject-row">' +
+              '<span class="subject-name">' + subject + '</span>' +
+              (room ? '<span class="room-tag">' + room + '</span>' : '') +
+            '</div>' +
+            '<div class="cell-flags">' +
+              (isFavSubject ? '<span class="flag fav-flag">★ Favourite</span>' : '') +
+              (needsCatchUp ? '<span class="flag catchup-flag">Catch up</span>' : '') +
+            '</div>';
+        }
+
+        if (hasNotes) {
+          const notesHint = document.createElement("div");
+          notesHint.className = "notes-hint";
+          notesHint.textContent = "Notes saved";
+          td.appendChild(notesHint);
+        }
+
+        if (scheduledFor.length > 0) {
+          const hint = document.createElement("div");
+          hint.className = "catchup-target-hint";
+          hint.textContent = scheduledFor.length === 1
+            ? "Catch-up scheduled here"
+            : scheduledFor.length + " catch-ups scheduled here";
+          td.appendChild(hint);
+        }
+
+        tr.appendChild(td);
+      });
+
+      gridBody.appendChild(tr);
+    });
+  }
+
+  // initial render
   renderGrid();
 </script>
 </body>
