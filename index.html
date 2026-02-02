@@ -43,7 +43,6 @@
       margin: 0;
     }
 
-    /* UPDATED: top instruction text is white + bold + multiline */
     .header-instructions {
       font-size: 0.95rem;
       color: #e5e7eb;
@@ -57,10 +56,9 @@
       font-size: 0.8rem;
       color: #f97316;
     }
-
-    #jsStatus.ready {
-      color: #22c55e;
-    }
+    #jsStatus.ready { color: #22c55e; }
+    #jsStatus.warn  { color: #facc15; }
+    #jsStatus.err   { color: #f87171; }
 
     .week-bar {
       display: flex;
@@ -81,14 +79,8 @@
       font-size: 0.8rem;
       cursor: pointer;
     }
-
-    .week-bar button:hover {
-      background: #1f2937;
-    }
-
-    #weekLabel {
-      font-weight: 500;
-    }
+    .week-bar button:hover { background: #1f2937; }
+    #weekLabel { font-weight: 500; }
 
     .missed-summary {
       text-align: center;
@@ -114,7 +106,6 @@
       font-weight: 700;
     }
 
-    /* small inline warning next to missed tally */
     .missed-warning {
       color: #facc15;
       font-weight: 900;
@@ -132,9 +123,7 @@
       table-layout: fixed;
     }
 
-    thead {
-      background: #111827;
-    }
+    thead { background: #111827; }
 
     th, td {
       padding: 6px 6px;
@@ -161,24 +150,11 @@
       width: 110px;
     }
 
-    th.reg-col {
-      width: 60px;
-      font-size: 0.75rem;
-    }
+    th.reg-col { width: 60px; font-size: 0.75rem; }
+    th.tutor-col { width: 60px; font-size: 0.75rem; }
 
-    /* Tutor same width as Reg */
-    th.tutor-col {
-      width: 60px;
-      font-size: 0.75rem;
-    }
-
-    tbody tr:nth-child(odd) {
-      background: #030712;
-    }
-
-    tbody tr:nth-child(even) {
-      background: #020617;
-    }
+    tbody tr:nth-child(odd) { background: #030712; }
+    tbody tr:nth-child(even) { background: #020617; }
 
     .day-col {
       background: #020617;
@@ -188,10 +164,7 @@
       font-weight: 600;
     }
 
-    .period-name {
-      font-weight: 600;
-    }
-
+    .period-name { font-weight: 600; }
     .period-time {
       font-size: 0.75rem;
       color: #9ca3af;
@@ -228,9 +201,7 @@
       font-style: italic;
     }
 
-    td.cell-lesson {
-      padding: 5px 6px;
-    }
+    td.cell-lesson { padding: 5px 6px; }
 
     td.reg-cell {
       text-align: center;
@@ -273,20 +244,9 @@
       min-height: 16px;
     }
 
-    .catchup-flag {
-      border-color: #ef4444;
-      color: #ef4444;
-    }
-
-    .missed-flag {
-      border-color: #dc2626;
-      color: #fecaca;
-    }
-
-    .good-flag {
-      border-color: #22c55e;
-      color: #86efac;
-    }
+    .catchup-flag { border-color: #ef4444; color: #ef4444; }
+    .missed-flag { border-color: #dc2626; color: #fecaca; }
+    .good-flag { border-color: #22c55e; color: #86efac; }
 
     .notes-hint {
       margin-top: 3px;
@@ -315,9 +275,7 @@
       z-index: 50;
     }
 
-    .overlay.visible {
-      display: flex;
-    }
+    .overlay.visible { display: flex; }
 
     .overlay-backdrop {
       position: absolute;
@@ -337,26 +295,15 @@
       z-index: 1;
     }
 
-    .lesson-popup h2 {
-      margin: 0 0 6px;
-      font-size: 1rem;
-    }
-
-    .lesson-popup h3 {
-      margin: 10px 0 4px;
-      font-size: 0.9rem;
-      color: #e5e7eb;
-    }
+    .lesson-popup h2 { margin: 0 0 6px; font-size: 1rem; }
+    .lesson-popup h3 { margin: 10px 0 4px; font-size: 0.9rem; color: #e5e7eb; }
 
     .popup-meta {
       font-size: 0.8rem;
       color: #9ca3af;
       margin-bottom: 8px;
     }
-
-    .popup-meta div + div {
-      margin-top: 2px;
-    }
+    .popup-meta div + div { margin-top: 2px; }
 
     .checkbox-row {
       display: flex;
@@ -432,10 +379,7 @@
       padding: 0;
       line-height: 1;
     }
-
-    .close-btn:hover {
-      color: #e5e7eb;
-    }
+    .close-btn:hover { color: #e5e7eb; }
 
     .catchup-list {
       margin: 4px 0 6px;
@@ -663,7 +607,13 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getFirestore,
+    doc,
+    onSnapshot,
+    runTransaction,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCEdR0fe9R6Q5LunJ7zoPlpRgqc7-okq54",
@@ -678,6 +628,25 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  // ----- Client identity (helps debug who overwrote what) -----
+  function getClientId() {
+    const k = "arloTimetableClientId";
+    let v = localStorage.getItem(k);
+    if (!v) {
+      v = "client_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+      localStorage.setItem(k, v);
+    }
+    return v;
+  }
+  const CLIENT_ID = getClientId();
+
+  function setStatus(text, cls) {
+    jsStatusEl.textContent = text;
+    jsStatusEl.classList.remove("ready", "warn", "err");
+    if (cls) jsStatusEl.classList.add(cls);
+  }
+
+  // ----- Timetable definition -----
   const timetable = {
     periods: [
       { key: "reg",   name: "Registration", start: "08:45", end: "09:05", special: false },
@@ -757,9 +726,8 @@
 
   const days = Object.keys(timetable.days);
 
-  let state = {
-    slotState: {}
-  };
+  // ----- Local state (NEVER written wholesale to Firestore) -----
+  let state = { slotState: {} };
 
   function slotKeyFor(dayName, periodKey) {
     return dayName + "_" + periodKey;
@@ -825,9 +793,67 @@
   let currentDocRef = null;
   let unsubscribe = null;
 
-  function saveState() {
-    if (!currentDocRef) return;
-    return setDoc(currentDocRef, state);
+  // ----- SAFETY: sanitize what we store in a slot -----
+  function sanitizeEntry(entry) {
+    const clean = {};
+    if (typeof entry.notes === "string") clean.notes = entry.notes;
+    if (typeof entry.goodLesson === "boolean") clean.goodLesson = entry.goodLesson;
+    if (typeof entry.needsCatchUp === "boolean") clean.needsCatchUp = entry.needsCatchUp;
+    if (typeof entry.missed === "boolean") clean.missed = entry.missed;
+    if (Array.isArray(entry.catchUpSlots)) clean.catchUpSlots = entry.catchUpSlots.slice();
+    return clean;
+  }
+
+  // ----- SAFETY: save ONE slot only (transaction) -----
+  async function saveSingleSlot(slotKey, patchEntry) {
+    if (!currentDocRef) throw new Error("No current doc ref");
+    if (!slotKey || typeof slotKey !== "string") throw new Error("Bad slot key");
+
+    const cleanPatch = sanitizeEntry(patchEntry);
+    setStatus("Saving…", "warn");
+
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(currentDocRef);
+
+      if (!snap.exists()) {
+        // Create week doc ONLY when first edit happens.
+        // This is safe: doc doesn't exist yet.
+        const newSlot = { ...cleanPatch, updatedAt: serverTimestamp(), updatedBy: CLIENT_ID };
+
+        tx.set(currentDocRef, {
+          slotState: { [slotKey]: newSlot },
+          version: 1,
+          createdAt: serverTimestamp(),
+          createdBy: CLIENT_ID,
+          lastUpdatedAt: serverTimestamp(),
+          lastUpdatedBy: CLIENT_ID
+        });
+
+        return;
+      }
+
+      const data = snap.data() || {};
+      const currentVersion = typeof data.version === "number" ? data.version : 0;
+      const currentSlot = (data.slotState && data.slotState[slotKey]) ? data.slotState[slotKey] : {};
+
+      // Merge patch into existing slot so concurrent edits don't delete each other
+      const mergedSlot = {
+        ...(currentSlot || {}),
+        ...cleanPatch,
+        updatedAt: serverTimestamp(),
+        updatedBy: CLIENT_ID
+      };
+
+      // Update ONLY the slot path + metadata. Never touch slotState root.
+      tx.update(currentDocRef, {
+        [`slotState.${slotKey}`]: mergedSlot,
+        version: currentVersion + 1,
+        lastUpdatedAt: serverTimestamp(),
+        lastUpdatedBy: CLIENT_ID
+      });
+    });
+
+    setStatus("Synced via Firebase", "ready");
   }
 
   function buildCatchUpIndex() {
@@ -999,11 +1025,13 @@
     currentCatchUpSlots = [];
   }
 
-  popupSaveBtn.addEventListener("click", () => {
+  popupSaveBtn.addEventListener("click", async () => {
     if (!currentSlotKey) return;
 
+    // Update local state immediately
     if (!state.slotState[currentSlotKey]) state.slotState[currentSlotKey] = {};
     const entry = state.slotState[currentSlotKey];
+
     entry.notes = popupNotesEl.value;
 
     if (currentIsLesson) {
@@ -1013,8 +1041,14 @@
       entry.catchUpSlots = currentCatchUpSlots.slice();
     }
 
-    saveState();
-    closeLessonPopup();
+    try {
+      await saveSingleSlot(currentSlotKey, entry);
+      closeLessonPopup();
+    } catch (err) {
+      console.error(err);
+      setStatus("Save failed", "err");
+      // Keep popup open so user doesn't lose changes
+    }
   });
 
   popupCancelBtn.addEventListener("click", closeLessonPopup);
@@ -1036,7 +1070,6 @@
       if (entry.missed) missedCount++;
     }
 
-    // UPDATED: warning when missedCount === 2
     const warning = (missedCount === 2)
       ? `<span class="missed-warning">(One more missed lesson = No leisure Friday)</span>`
       : "";
@@ -1156,28 +1189,34 @@
 
   function subscribeToCurrentWeek() {
     if (unsubscribe) unsubscribe();
+
     const key = getWeekKey(currentWeekDate);
     currentDocRef = doc(db, "timetables", "arlo-" + key);
 
+    // Don't auto-create docs. Just listen.
     state = { slotState: {} };
     renderGrid();
+    setStatus("Connecting…", null);
 
     unsubscribe = onSnapshot(
       currentDocRef,
-      docSnap => {
+      (docSnap) => {
         if (docSnap.exists()) {
-          const data = docSnap.data();
+          const data = docSnap.data() || {};
+          // Only ever read slotState from the doc. We do not “own” other root fields.
           state.slotState = data.slotState || {};
+          renderGrid();
+          setStatus("Synced via Firebase", "ready");
         } else {
-          saveState();
+          // Week doc doesn't exist yet. That's fine.
+          state.slotState = {};
+          renderGrid();
+          setStatus("No data for this week yet", "warn");
         }
-        renderGrid();
-        jsStatusEl.textContent = "Synced via Firebase";
-        jsStatusEl.classList.add("ready");
       },
-      error => {
+      (error) => {
         console.error("Firestore error:", error);
-        jsStatusEl.textContent = "Sync error";
+        setStatus("Sync error", "err");
       }
     );
   }
